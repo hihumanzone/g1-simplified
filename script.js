@@ -96,42 +96,45 @@ async function makeApiCall(messages, isFinalAnswer, apiKey) {
   }
 }
 
-function appendStep(container, step, isFinal = false) {
+function appendStep(container, step) {
   const stepDiv = document.createElement("div");
   stepDiv.className = "step";
 
-  const stepTitle = document.createElement("strong");
-  stepTitle.textContent = step.title;
+  const titleWrapper = document.createElement("div");
+  titleWrapper.className = "titleWrapper";
 
-  const stepContent = document.createElement("p");
-  stepContent.textContent = step.content;
+  const titleDiv = document.createElement("strong");
+  titleDiv.textContent = step.title;
 
-  if (!isFinal) {
-    stepContent.style.display = "none";
+  const contentP = document.createElement("p");
+  contentP.textContent = step.content;
 
+  if (step.title !== "Final Answer") {
     const toggleButton = document.createElement("button");
-    toggleButton.textContent = "Show";
-    toggleButton.className = "toggle-button";
-    toggleButton.style.marginLeft = "10px";
+    toggleButton.textContent = "Show Content";
+    toggleButton.className = "toggleButton";
+
+    contentP.style.display = "none";
 
     toggleButton.addEventListener("click", () => {
-      if (stepContent.style.display === "none") {
-        stepContent.style.display = "block";
-        toggleButton.textContent = "Hide";
+      if (contentP.style.display === "none") {
+        contentP.style.display = "block";
+        toggleButton.textContent = "Hide Content";
       } else {
-        stepContent.style.display = "none";
-        toggleButton.textContent = "Show";
+        contentP.style.display = "none";
+        toggleButton.textContent = "Show Content";
       }
     });
 
-    stepDiv.appendChild(stepTitle);
-    stepDiv.appendChild(toggleButton);
+    titleWrapper.appendChild(titleDiv);
+    titleWrapper.appendChild(toggleButton);
   } else {
-    stepDiv.appendChild(stepTitle);
+    contentP.style.display = "block";
+    titleWrapper.appendChild(titleDiv);
   }
 
-  stepDiv.appendChild(stepContent);
-
+  stepDiv.appendChild(titleWrapper);
+  stepDiv.appendChild(contentP);
   container.appendChild(stepDiv);
 }
 
