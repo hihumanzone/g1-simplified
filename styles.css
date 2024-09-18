@@ -1,0 +1,141 @@
+/* styles.css */
+
+:root {
+  --background-color: #121212;
+  --primary-text-color: #e0e0e0;
+  --secondary-text-color: #b0b0b0;
+  --accent-color: #bb86fc;
+  --button-bg-color: #1f1f1f;
+  --button-hover-color: #333333;
+  --input-bg-color: #1e1e1e;
+  --border-color: #333333;
+  --gray-color: #808080;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--primary-text-color);
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  width: 80%;
+  max-width: 800px;
+  margin: 50px auto;
+  padding: 20px;
+  background-color: #181818;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+  font-size: 24px;
+  color: var(--accent-color);
+  margin-bottom: 20px;
+}
+
+p {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--secondary-text-color);
+  margin-bottom: 30px;
+}
+
+.input-group {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+input[type="password"], textarea {
+  width: calc(100% - 140px);
+  padding: 10px;
+  background-color: var(--input-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--primary-text-color);
+  font-size: 16px;
+  outline: none;
+}
+
+input[type="password"]::placeholder, textarea::placeholder {
+  color: var(--secondary-text-color);
+}
+
+textarea {
+  resize: vertical;
+}
+
+button {
+  background-color: var(--button-bg-color);
+  color: var(--primary-text-color);
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-left: 20px;
+}
+
+button:hover {
+  background-color: var(--button-hover-color);
+}
+
+.toggle-button {
+  background-color: var(--button-bg-color);
+  color: var(--primary-text-color);
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.toggle-button:hover {
+  background-color: var(--button-hover-color);
+}
+
+#responseContainer {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #1e1e1e;
+  border-radius: 6px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-height: 100px;
+}
+
+#responseContainer::before {
+  content: "";
+  display: block;
+}
+
+.step {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #232323;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.step strong {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--accent-color);
+}
+
+#timeContainer {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--secondary-text-color);
+  text-align: right;
+}
+
+#responseContainer .generating {
+  text-align: center;
+  font-style: italic;
+  color: var(--gray-color);
+}
