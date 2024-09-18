@@ -84,7 +84,13 @@ button:hover {
   background-color: var(--button-hover-color);
 }
 
-.toggle-button {
+.titleWrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggleButton {
   background-color: var(--button-bg-color);
   color: var(--primary-text-color);
   border: none;
@@ -95,7 +101,7 @@ button:hover {
   transition: background-color 0.3s ease;
 }
 
-.toggle-button:hover {
+.toggleButton:hover {
   background-color: var(--button-hover-color);
 }
 
