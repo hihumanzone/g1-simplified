@@ -40,22 +40,23 @@ document.getElementById("submitQuery").addEventListener("click", async () => {
   timeContainer.innerHTML = "";
 
   const messages = [
-    { role: "system", content: `You are G2, a model designed to spend some time thinking before you respond, much like a person would. Throughout your initial state processing, you are supposed to learn how to refine your thinking process, try different strategies, and recognize any mistakes you might have made in previous thinking steps.
+    { role: "system", content: `You are G1, a model designed to spend some time thinking before you respond, much like a person would. Throughout your initial state processing, you are supposed to learn how to refine your thinking process, try different strategies, and recognize any mistakes you might have made in previous thinking steps.
 
-Your thinking process will be divided into steps. Each thinking step should contain three segments: the first is the thinking content, followed by a title that represents that particular step, and finally, a decision on whether to continue thinking or conclude that you are ready to provide the final response. Use and respond using JSON format for thinking steps, with the keys 'content', 'title', and 'next_action' (either 'continue' or 'final_answer').
+Your thinking process will be divided into steps. You are only supposed to provide one step of your thinking process per request. If that particular thinking process continues, you will be asked again to continue with what you were doing in a new request, starting fresh to reflect upon previous steps and build upon them. Each thinking step should contain three segments: the first is the thinking content, followed by a title that represents that particular step, and finally, a decision on whether to continue thinking or conclude that you are ready to provide the final response. Use normal text for your thoughts, and at the end of the thinking step, include some JSON-formatted information with the keys 'title' (provide a brief title for the step) and 'next_action' (either 'continue' or 'final_answer').
 
-Use as many reasoning steps as necessary, and ensure you cover everything provided in the query. Pay close attention to the main parts and tasks, planning what to do, how to do it, and executing it. Essentially, prepare nodes and a roadmap for the final response. Make sure you cover everything across different methods and strategies. Recheck your work, recognize any mistakes from earlier thinking steps, and ensure everything is relevant and connected.
+Use as many reasoning steps as you can, and ensure you cover everything provided in the query. Pay close attention to the main parts and tasks, planning what to do, how to do it, and doing it. Essentially, prepare notes, proofs and a roadmap for the final response. Make sure to cover everything, genuinely solve the issues, write it down, and implement it using various methods and strategies. Recheck your work, recognize any mistakes from earlier thinking steps, and ensure everything is relevant and connected.
 
-Always explore alternative methods for solving the problem. As an LLM, it's possible that you could have made an error in any of the previous steps. Recheck each thinking step after major steps as part of the process of reflection. It’s normal to make mistakes, so carefully examine where you might have gone wrong and correct yourself. You should also try different strategies and methods to verify your conclusions. Genuinely and seriously re-examine your steps, using at least three methods or strategies, and apply the best possible approaches to achieve the intended goal.
+Always explore and use alternative methods for solving the problem. As an LLM, it's possible that you could have made an error in any of the previous steps. Recheck each thinking step after major steps as part of the process of reflection. It’s normal to make mistakes, so carefully examine where you might have gone wrong and correct yourself. You should also apply different strategies and methods to verify your conclusions. Genuinely and seriously re-examine your steps, using at least three methods or strategies, and apply the best possible approaches to achieve the intended goal.
 
 Use \`"next_action": "final_answer"\` when you believe you are ready to provide a final response after all the detailed thinking. Make sure you have gathered sufficient information and notes about what the final response should be like. Aim to be as helpful, accurate, and informative to the user as possible.
 
-Example of a valid JSON thinking step response:
+Example of a valid thinking step:
+“To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...
+
 {
-  "content": "To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...",
   "title": "Identifying Key Information",
   "next_action": "continue"
-}` },
+}“` },
     { role: "user", content: userQuery },
     { role: "assistant", content: "Thank you. I will now think step by step, following my instructions, starting by planning and breaking down everything." }
   ];
@@ -75,6 +76,7 @@ Example of a valid JSON thinking step response:
     appendStep(responseContainer, steps[steps.length - 1]);
 
     messages.push({ role: "assistant", content: JSON.stringify(stepData) });
+    messages.push({ role: "user", content: "Please continue thinking." });
 
     if (stepData.next_action === 'final_answer' || stepCount > 25) break;
     stepCount++;
@@ -95,11 +97,32 @@ async function makeApiCall(messages, isFinalAnswer, apiKey) {
     const response = await groq.chat.completions.create({
       model: "llama-3.1-70b-versatile",
       messages,
-      ...(isFinalAnswer ? {} : { response_format: { type: "json_object" } }),
       temperature: 0.2,
     });
 
-    return isFinalAnswer ? response.choices[0].message.content : JSON.parse(response.choices[0].message.content);
+    const responseContent = response.choices[0].message.content;
+
+    if (isFinalAnswer) {
+      return responseContent;
+    }
+
+    const jsonMatches = [...responseContent.matchAll(/\{[\s\S]*?\}/g)];
+
+    if (jsonMatches.length === 0) {
+      throw new Error("No valid JSON found in the response content.");
+    }
+
+    const lastJsonMatch = jsonMatches[jsonMatches.length - 1];
+    const jsonString = lastJsonMatch[0];
+    const parsedJson = JSON.parse(jsonString);
+
+    const content = responseContent.slice(0, lastJsonMatch.index).trim();
+
+    return {
+      content,
+      ...parsedJson
+    };
+
   } catch (error) {
     console.error("Error making API call:", error);
     return { title: "Error", content: "An error occurred while generating the response.", next_action: "final_answer" };
@@ -113,7 +136,7 @@ function appendStep(container, step) {
   const titleWrapper = document.createElement("div");
   titleWrapper.className = "titleWrapper";
 
-  const titleDiv = document.createElement("strong");
+  const titleDiv = document.createElement("title");
   titleDiv.textContent = step.title;
 
   const contentP = document.createElement("div");
