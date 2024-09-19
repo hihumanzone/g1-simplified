@@ -20,6 +20,8 @@ window.addEventListener('load', () => {
   }
 });
 
+import 'https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js';
+const md = new markdownit();
 const { Groq } = await import("https://esm.run/groq-sdk");
 
 document.getElementById("submitQuery").addEventListener("click", async () => {
@@ -38,16 +40,24 @@ document.getElementById("submitQuery").addEventListener("click", async () => {
   timeContainer.innerHTML = "";
 
   const messages = [
-    { role: "system", content: `You are an expert AI assistant that explains your reasoning step by step. For each step, provide a title that describes what you're doing in that step, along with the content. Decide if you need another step or if you're ready to give the final answer. Respond in JSON format with 'title', 'content', and 'next_action' (either 'continue' or 'final_answer') keys. USE AS MANY REASONING STEPS AS POSSIBLE. AT LEAST 3. BE AWARE OF YOUR LIMITATIONS AS AN LLM AND WHAT YOU CAN AND CANNOT DO. IN YOUR REASONING, INCLUDE EXPLORATION OF ALTERNATIVE ANSWERS. CONSIDER YOU MAY BE WRONG, AND IF YOU ARE WRONG IN YOUR REASONING, WHERE IT WOULD BE. FULLY TEST ALL OTHER POSSIBILITIES. YOU CAN BE WRONG. WHEN YOU SAY YOU ARE RE-EXAMINING, ACTUALLY RE-EXAMINE, AND USE ANOTHER APPROACH TO DO SO. DO NOT JUST SAY YOU ARE RE-EXAMINING. USE AT LEAST 3 METHODS TO DERIVE THE ANSWER. USE BEST PRACTICES.
+    { role: "system", content: `You are G2, a model designed to spend some time thinking before you respond, much like a person would. Throughout your initial state processing, you are supposed to learn how to refine your thinking process, try different strategies, and recognize any mistakes you might have made in previous thinking steps.
 
-Example of a valid JSON response:
+Your thinking process will be divided into steps. Each thinking step should contain three segments: the first is the thinking content, followed by a title that represents that particular step, and finally, a decision on whether to continue thinking or conclude that you are ready to provide the final response. Use and respond using JSON format for thinking steps, with the keys 'content', 'title', and 'next_action' (either 'continue' or 'final_answer').
+
+Use as many reasoning steps as necessary, and ensure you cover everything provided in the query. Pay close attention to the main parts and tasks, planning what to do, how to do it, and executing it. Essentially, prepare nodes and a roadmap for the final response. Make sure you cover everything across different methods and strategies. Recheck your work, recognize any mistakes from earlier thinking steps, and ensure everything is relevant and connected.
+
+Always explore alternative methods for solving the problem. As an LLM, it's possible that you could have made an error in any of the previous steps. Recheck each thinking step after major steps as part of the process of reflection. It’s normal to make mistakes, so carefully examine where you might have gone wrong and correct yourself. You should also try different strategies and methods to verify your conclusions. Genuinely and seriously re-examine your steps, using at least three methods or strategies, and apply the best possible approaches to achieve the intended goal.
+
+Use \`"next_action": "final_answer"\` when you believe you are ready to provide a final response after all the detailed thinking. Make sure you have gathered sufficient information and notes about what the final response should be like. Aim to be as helpful, accurate, and informative to the user as possible.
+
+Example of a valid JSON thinking step response:
 {
-  "title": "Identifying Key Information",
   "content": "To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...",
+  "title": "Identifying Key Information",
   "next_action": "continue"
 }` },
     { role: "user", content: userQuery },
-    { role: "assistant", content: "Thank you! I will now think step by step following my instructions, starting at the beginning after decomposing the problem." }
+    { role: "assistant", content: "Thank you. I will now think step by step, following my instructions, starting by planning and breaking down everything." }
   ];
 
   const steps = [];
@@ -74,7 +84,7 @@ Example of a valid JSON response:
   messages.push({ role: "user", content: "Please provide the final answer based on your reasoning above." });
   const finalData = await makeApiCall(messages, true, apiKey);
 
-  steps.push({ title: "Final Answer", content: finalData.content });
+  steps.push({ title: "Final Answer", content: finalData });
   displaySteps(responseContainer, steps);
 });
 
@@ -85,11 +95,11 @@ async function makeApiCall(messages, isFinalAnswer, apiKey) {
     const response = await groq.chat.completions.create({
       model: "llama-3.1-70b-versatile",
       messages,
-      max_tokens: isFinalAnswer ? 200 : 300,
-      response_format: { type: "json_object" },
+      ...(isFinalAnswer ? {} : { response_format: { type: "json_object" } }),
       temperature: 0.2,
     });
-    return JSON.parse(response.choices[0].message.content);
+
+    return isFinalAnswer ? response.choices[0].message.content : JSON.parse(response.choices[0].message.content);
   } catch (error) {
     console.error("Error making API call:", error);
     return { title: "Error", content: "An error occurred while generating the response.", next_action: "final_answer" };
@@ -106,8 +116,8 @@ function appendStep(container, step) {
   const titleDiv = document.createElement("strong");
   titleDiv.textContent = step.title;
 
-  const contentP = document.createElement("p");
-  contentP.textContent = step.content;
+  const contentP = document.createElement("div");
+  contentP.innerHTML = md.render(step.content);
 
   if (step.title !== "Final Answer") {
     const toggleButton = document.createElement("button");
