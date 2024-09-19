@@ -105,6 +105,13 @@ button:hover {
   background-color: var(--button-hover-color);
 }
 
+.heading {
+  font-size: 24px;
+  color: var(--accent-color);
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
 #responseContainer {
   margin-top: 30px;
   padding: 20px;
