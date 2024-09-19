@@ -67,7 +67,8 @@ Example of a valid thinking step:
 
   while (true) {
     const startTime = Date.now();
-    const stepData = await makeApiCall(messages, false, apiKey);
+    const stepRaw = await makeApiCall(messages, false, apiKey);
+    const stepData = extractJsonFromResponse(stepRaw);
     const thinkingTime = (Date.now() - startTime) / 1000;
     totalThinkingTime += thinkingTime;
 
@@ -75,15 +76,15 @@ Example of a valid thinking step:
 
     appendStep(responseContainer, steps[steps.length - 1]);
 
-    messages.push({ role: "assistant", content: JSON.stringify(stepData) });
-    messages.push({ role: "user", content: "Please continue thinking." });
+    messages.push({ role: "assistant", content: stepRaw });
+    messages.push({ role: "user", content: "Please continue with your thought process. Make sure to re-examine your previous steps and focus on your target. Implement the strategies and methods by writing them down, rather than just imagining them and their outcomes." });
 
     if (stepData.next_action === 'final_answer' || stepCount > 25) break;
     stepCount++;
   }
 
   timeContainer.innerHTML = `<strong>Total thinking time: ${totalThinkingTime.toFixed(2)} seconds</strong>`;
-  messages.push({ role: "user", content: "Please provide the final answer based on your reasoning above." });
+  messages.push({ role: "user", content: "Looks like you are finally done thinking! Please provide your final answer based on the reasoning above." });
   const finalData = await makeApiCall(messages, true, apiKey);
 
   steps.push({ title: "Final Answer", content: finalData });
@@ -101,32 +102,31 @@ async function makeApiCall(messages, isFinalAnswer, apiKey) {
     });
 
     const responseContent = response.choices[0].message.content;
-
-    if (isFinalAnswer) {
-      return responseContent;
-    }
-
-    const jsonMatches = [...responseContent.matchAll(/\{[\s\S]*?\}/g)];
-
-    if (jsonMatches.length === 0) {
-      throw new Error("No valid JSON found in the response content.");
-    }
-
-    const lastJsonMatch = jsonMatches[jsonMatches.length - 1];
-    const jsonString = lastJsonMatch[0];
-    const parsedJson = JSON.parse(jsonString);
-
-    const content = responseContent.slice(0, lastJsonMatch.index).trim();
-
-    return {
-      content,
-      ...parsedJson
-    };
+    return responseContent;
 
   } catch (error) {
     console.error("Error making API call:", error);
     return { title: "Error", content: "An error occurred while generating the response.", next_action: "final_answer" };
   }
+}
+
+function extractJsonFromResponse(responseContent) {
+  const jsonMatches = [...responseContent.matchAll(/\{[\s\S]*?\}/g)];
+
+  if (jsonMatches.length === 0) {
+    throw new Error("No valid JSON found in the response content.");
+  }
+
+  const lastJsonMatch = jsonMatches[jsonMatches.length - 1];
+  const jsonString = lastJsonMatch[0];
+  const parsedJson = JSON.parse(jsonString);
+
+  const content = responseContent.slice(0, lastJsonMatch.index).trim();
+
+  return {
+    content,
+    ...parsedJson
+  };
 }
 
 function appendStep(container, step) {
