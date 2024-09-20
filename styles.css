@@ -152,3 +152,38 @@ button:hover {
   font-style: italic;
   color: var(--gray-color);
 }
+
+pre {
+  position: relative;
+  background-color: #2d2d2d;
+  padding: 15px;
+  border-radius: 5px;
+  overflow: auto;
+  font-family: 'Courier New', Courier, monospace;
+  color: #f8f8f2;
+  margin: 10px 0;
+}
+
+code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+}
+
+.copy-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: var(--button-bg-color);
+  color: var(--primary-text-color);
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.copy-button:hover {
+  opacity: 1;
+}
