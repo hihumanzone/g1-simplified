@@ -3,6 +3,16 @@ const apiKeyManager = {
   save: (apiKey) => localStorage.setItem('groqApiKey', apiKey)
 };
 
+const baseUrlManager = {
+  get: () => localStorage.getItem('groqBaseUrl') || 'https://api.groq.com/openai/v1',
+  save: (baseUrl) => localStorage.setItem('groqBaseUrl', baseUrl)
+};
+
+const modelManager = {
+  get: () => localStorage.getItem('groqModel') || 'llama-3.1-70b-versatile',
+  save: (model) => localStorage.setItem('groqModel', model)
+};
+
 document.getElementById("saveApiKey").addEventListener("click", () => {
   const apiKey = document.getElementById("apiKeyInput").value;
   if (apiKey) {
@@ -13,10 +23,46 @@ document.getElementById("saveApiKey").addEventListener("click", () => {
   }
 });
 
+document.getElementById("saveBaseUrl").addEventListener("click", () => {
+  const baseUrl = document.getElementById("baseUrlInput").value;
+  if (baseUrl) {
+    baseUrlManager.save(baseUrl);
+    alert('Base URL saved!');
+  } else {
+    alert('Please enter a valid Base URL.');
+  }
+});
+
+document.getElementById("saveModel").addEventListener("click", () => {
+  const model = document.getElementById("modelInput").value;
+  if (model) {
+    modelManager.save(model);
+    alert('Model saved!');
+  } else {
+    alert('Please enter a valid model.');
+  }
+});
+
+document.getElementById("toggleSettings").addEventListener("click", () => {
+  const settingsDiv = document.getElementById("settings");
+  const isHidden = settingsDiv.classList.contains("hidden");
+  settingsDiv.classList.toggle("hidden", !isHidden);
+  document.getElementById("toggleSettings").textContent = isHidden ? "Hide Settings" : "Show Settings";
+});
+
 window.addEventListener('load', () => {
   const savedApiKey = apiKeyManager.get();
+  const savedBaseUrl = baseUrlManager.get();
+  const savedModel = modelManager.get();
+
   if (savedApiKey) {
     document.getElementById('apiKeyInput').value = savedApiKey;
+  }
+  if (savedBaseUrl) {
+    document.getElementById('baseUrlInput').value = savedBaseUrl;
+  }
+  if (savedModel) {
+    document.getElementById('modelInput').value = savedModel;
   }
 });
 
@@ -26,6 +72,9 @@ const { OpenAI } = await import("https://esm.run/openai");
 
 document.getElementById("submitQuery").addEventListener("click", async () => {
   const apiKey = apiKeyManager.get();
+  const baseUrl = baseUrlManager.get();
+  const model = modelManager.get();
+
   if (!apiKey) {
     alert('Please save your API key first.');
     return;
@@ -67,7 +116,7 @@ Example of a valid thinking step:
 
   while (true) {
     const startTime = Date.now();
-    const stepRaw = await makeApiCall(messages, false, apiKey);
+    const stepRaw = await makeApiCall(messages, false, apiKey, baseUrl, model);
     const stepData = extractJsonFromResponse(stepRaw);
     const thinkingTime = (Date.now() - startTime) / 1000;
     totalThinkingTime += thinkingTime;
@@ -85,18 +134,18 @@ Example of a valid thinking step:
 
   timeContainer.innerHTML = `<strong>Total thinking time: ${totalThinkingTime.toFixed(2)} seconds</strong>`;
   messages.push({ role: "user", content: "Looks like you are finally done thinking! Please provide your final answer to the user based on the reasoning above." });
-  const finalData = await makeApiCall(messages, true, apiKey);
+  const finalData = await makeApiCall(messages, true, apiKey, baseUrl, model);
 
   steps.push({ title: "Final Answer", content: finalData });
   displaySteps(responseContainer, steps);
 });
 
-async function makeApiCall(messages, isFinalAnswer, apiKey) {
+async function makeApiCall(messages, isFinalAnswer, apiKey, baseUrl, model) {
   try {
-    const openai = new OpenAI({ baseURL: 'https://api.groq.com/openai/v1', apiKey, dangerouslyAllowBrowser: true });
+    const openai = new OpenAI({ baseURL: baseUrl, apiKey, dangerouslyAllowBrowser: true });
 
     const response = await openai.chat.completions.create({
-      model: "llama-3.1-70b-versatile",
+      model: model,
       messages,
       temperature: 0.2,
     });
@@ -106,7 +155,7 @@ async function makeApiCall(messages, isFinalAnswer, apiKey) {
 
   } catch (error) {
     console.error("Error making API call:", error);
-    return 'An error occurred while generating the response.\n{ title: "Error", next_action: "final_answer" }';
+    return 'An error occurred while generating the response.\\n{ title: "Error", next_action: "final_answer" }';
   }
 }
 
