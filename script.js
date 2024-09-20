@@ -106,7 +106,7 @@ async function makeApiCall(messages, isFinalAnswer, apiKey) {
 
   } catch (error) {
     console.error("Error making API call:", error);
-    return { title: "Error", content: "An error occurred while generating the response.", next_action: "final_answer" };
+    return 'An error occurred while generating the response.\n{ title: "Error", next_action: "final_answer" }';
   }
 }
 
@@ -114,7 +114,7 @@ function extractJsonFromResponse(responseContent) {
   const jsonMatches = [...responseContent.matchAll(/\{[\s\S]*?\}/g)];
 
   if (jsonMatches.length === 0) {
-    throw new Error("No valid JSON found in the response content.");
+    return { title: "Error", content: "An error occurred while generating the response.", next_action: "final_answer" };
   }
 
   const lastJsonMatch = jsonMatches[jsonMatches.length - 1];
