@@ -13,9 +13,21 @@
     <div class="heading">g1: Using Llama-3.1 70b on Groq to create o1-like reasoning chains</div>
     <p>This is an early prototype of using prompting to create o1-like reasoning chains to improve output accuracy. It is not perfect and accuracy has yet to be formally evaluated. It is powered by Groq so that the reasoning step is fast!</p>
 
-    <div class="input-group">
-      <input type="password" id="apiKeyInput" placeholder="Enter your Groq API key">
-      <button id="saveApiKey">Save API Key</button>
+    <button id="toggleSettings">Show Settings</button>
+
+    <div id="settings" class="hidden">
+      <div class="input-group">
+        <input type="password" id="apiKeyInput" placeholder="Enter your Groq API key">
+        <button id="saveApiKey">Save API Key</button>
+      </div>
+      <div class="input-group">
+        <input type="text" id="baseUrlInput" placeholder="Enter Base URL (default: https://api.groq.com/openai/v1)">
+        <button id="saveBaseUrl">Save Base URL</button>
+      </div>
+      <div class="input-group">
+        <input type="text" id="modelInput" placeholder="Enter Model (default: llama-3.1-70b-versatile)">
+        <button id="saveModel">Save Model</button>
+      </div>
     </div>
 
     <div class="input-group">
