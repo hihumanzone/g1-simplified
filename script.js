@@ -142,6 +142,31 @@ function appendStep(container, step) {
   const contentP = document.createElement("div");
   contentP.innerHTML = md.render(step.content);
 
+  const codeBlocks = contentP.querySelectorAll('pre');
+  codeBlocks.forEach(pre => {
+    const button = document.createElement('button');
+    button.className = 'copy-button';
+    button.textContent = 'Copy';
+
+    button.addEventListener('click', () => {
+      const code = pre.querySelector('code').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        button.textContent = 'Copied!';
+        setTimeout(() => {
+          button.textContent = 'Copy';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        button.textContent = 'Error';
+        setTimeout(() => {
+          button.textContent = 'Copy';
+        }, 2000);
+      });
+    });
+
+    pre.appendChild(button);
+  });
+
   if (step.title !== "Final Answer") {
     const toggleButton = document.createElement("button");
     toggleButton.textContent = "Show Content";
