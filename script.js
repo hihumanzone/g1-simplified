@@ -22,7 +22,7 @@ window.addEventListener('load', () => {
 
 import 'https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js';
 const md = new markdownit();
-const { Groq } = await import("https://esm.run/groq-sdk");
+const { OpenAI } = await import("https://esm.run/openai");
 
 document.getElementById("submitQuery").addEventListener("click", async () => {
   const apiKey = apiKeyManager.get();
@@ -84,7 +84,7 @@ Example of a valid thinking step:
   }
 
   timeContainer.innerHTML = `<strong>Total thinking time: ${totalThinkingTime.toFixed(2)} seconds</strong>`;
-  messages.push({ role: "user", content: "Looks like you are finally done thinking! Please provide your final answer based on the reasoning above." });
+  messages.push({ role: "user", content: "Looks like you are finally done thinking! Please provide your final answer to the user based on the reasoning above." });
   const finalData = await makeApiCall(messages, true, apiKey);
 
   steps.push({ title: "Final Answer", content: finalData });
@@ -93,9 +93,9 @@ Example of a valid thinking step:
 
 async function makeApiCall(messages, isFinalAnswer, apiKey) {
   try {
-    const groq = new Groq({ apiKey, dangerouslyAllowBrowser: true });
+    const openai = new OpenAI({ baseURL: 'https://api.groq.com/openai/v1', apiKey, dangerouslyAllowBrowser: true });
 
-    const response = await groq.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: "llama-3.1-70b-versatile",
       messages,
       temperature: 0.2,
