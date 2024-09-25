@@ -126,9 +126,12 @@ Example of a valid thinking step:
     appendStep(responseContainer, steps[steps.length - 1]);
 
     messages.push({ role: "assistant", content: stepRaw });
-    messages.push({ role: "user", content: "Please continue with your thought process. Make sure to re-examine your previous steps and focus on your target. Implement the strategies and methods by writing them down, rather than just imagining them and their outcomes." });
 
-    if (stepData.next_action === 'final_answer' || stepCount > 25) break;
+    if (stepData.next_action === 'final_answer' || stepCount > 25) {
+      break;
+    } else {
+      messages.push({ role: "user", content: "Please continue with your thought process. Make sure to re-examine your previous steps and focus on your target. Implement the strategies and methods by writing them down, rather than just imagining them and their outcomes." });
+    }
     stepCount++;
   }
 
