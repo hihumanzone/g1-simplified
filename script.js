@@ -171,7 +171,13 @@ function extractJsonFromResponse(responseContent) {
 
   const lastJsonMatch = jsonMatches[jsonMatches.length - 1];
   const jsonString = lastJsonMatch[0];
-  const parsedJson = JSON.parse(jsonString);
+
+  let parsedJson;
+  try {
+    parsedJson = JSON.parse(jsonString);
+  } catch (error) {
+    return { title: "Error", content: "An error occurred while generating the response.", next_action: "final_answer" };
+  }
 
   const content = responseContent.slice(0, lastJsonMatch.index).trim();
 
