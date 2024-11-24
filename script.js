@@ -13,6 +13,16 @@ const modelManager = {
   save: (model) => localStorage.setItem('groqModel', model)
 };
 
+const retryAttemptsManager = {
+  get: () => parseInt(localStorage.getItem('retryAttempts')) || 3,
+  save: (attempts) => localStorage.setItem('retryAttempts', attempts)
+};
+
+const retryDelayManager = {
+  get: () => parseInt(localStorage.getItem('retryDelay')) || 30,
+  save: (delay) => localStorage.setItem('retryDelay', delay)
+};
+
 document.getElementById("saveApiKey").addEventListener("click", () => {
   const apiKey = document.getElementById("apiKeyInput").value;
   if (apiKey) {
@@ -43,17 +53,39 @@ document.getElementById("saveModel").addEventListener("click", () => {
   }
 });
 
+document.getElementById("saveRetryAttempts").addEventListener("click", () => {
+  const retryAttempts = document.getElementById("retryAttemptsInput").value;
+  if (retryAttempts && !isNaN(retryAttempts) && retryAttempts > 0) {
+    retryAttemptsManager.save(retryAttempts);
+    alert('Retry attempts saved!');
+  } else {
+    alert('Please enter a valid number greater than 0 for retry attempts.');
+  }
+});
+
+document.getElementById("saveRetryDelay").addEventListener("click", () => {
+  const retryDelay = document.getElementById("retryDelayInput").value;
+  if (retryDelay && !isNaN(retryDelay) && retryDelay >= 0) {
+    retryDelayManager.save(retryDelay);
+    alert('Retry delay saved!');
+  } else {
+    alert('Please enter a valid number (0 or greater) for retry delay.');
+  }
+});
+
 document.getElementById("toggleSettings").addEventListener("click", () => {
   const settingsDiv = document.getElementById("settings");
   const isHidden = settingsDiv.classList.contains("hidden");
   settingsDiv.classList.toggle("hidden", !isHidden);
-  document.getElementById("toggleSettings").textContent = isHidden ? "Hide Settings" : "Show Settings";
+  document.getElementById("toggleSettings").textContent = isHidden ? "Show Settings" : "Hide Settings";
 });
 
 window.addEventListener('load', () => {
   const savedApiKey = apiKeyManager.get();
   const savedBaseUrl = baseUrlManager.get();
   const savedModel = modelManager.get();
+  const savedRetryAttempts = retryAttemptsManager.get();
+  const savedRetryDelay = retryDelayManager.get();
 
   if (savedApiKey) {
     document.getElementById('apiKeyInput').value = savedApiKey;
@@ -64,6 +96,8 @@ window.addEventListener('load', () => {
   if (savedModel) {
     document.getElementById('modelInput').value = savedModel;
   }
+  document.getElementById('retryAttemptsInput').value = savedRetryAttempts;
+  document.getElementById('retryDelayInput').value = savedRetryDelay;
 });
 
 import 'https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js';
@@ -74,6 +108,8 @@ document.getElementById("submitQuery").addEventListener("click", async () => {
   const apiKey = apiKeyManager.get();
   const baseUrl = baseUrlManager.get();
   const model = modelManager.get();
+  const maxRetries = retryAttemptsManager.get();
+  const retryDelay = retryDelayManager.get() * 1000;
 
   if (!apiKey) {
     alert('Please save your API key first.');
@@ -103,20 +139,35 @@ Example of a valid thinking step:
 “To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...
 
 {
-  "title": "Identifying Key Information",
-  "next_action": "continue"
+"title": "Identifying Key Information",
+"next_action": "continue"
 }“` },
     { role: "user", content: userQuery },
     { role: "assistant", content: "Thank you. I will now think step by step, following my instructions, starting by planning and breaking down everything." }
-  ];
+    ];
 
   const steps = [];
   let totalThinkingTime = 0;
   let stepCount = 1;
 
+  async function makeApiCallWithRetry(messages, isFinalAnswer, apiKey, baseUrl, model, retriesRemaining = maxRetries) {
+    try {
+      return await makeApiCall(messages, isFinalAnswer, apiKey, baseUrl, model);
+    } catch (error) {
+      if (retriesRemaining > 0) {
+        console.log(`API call failed, retrying in ${retryDelay / 1000} seconds. ${retriesRemaining} retries remaining.`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return makeApiCallWithRetry(messages, isFinalAnswer, apiKey, baseUrl, model, retriesRemaining - 1);
+      } else {
+        console.error("API call failed after multiple retries:", error);
+        return 'An error occurred while generating the response after multiple retries.\\n{ title: "Error", next_action: "final_answer" }';
+      }
+    }
+  }
+
   while (true) {
     const startTime = Date.now();
-    const stepRaw = await makeApiCall(messages, false, apiKey, baseUrl, model);
+    const stepRaw = await makeApiCallWithRetry(messages, false, apiKey, baseUrl, model);
     const stepData = extractJsonFromResponse(stepRaw);
     const thinkingTime = (Date.now() - startTime) / 1000;
     totalThinkingTime += thinkingTime;
@@ -137,7 +188,7 @@ Example of a valid thinking step:
 
   timeContainer.innerHTML = `<strong>Total thinking time: ${totalThinkingTime.toFixed(2)} seconds</strong>`;
   messages.push({ role: "user", content: "Looks like you are finally done thinking! Please provide your final answer to the user based on the reasoning above." });
-  const finalData = await makeApiCall(messages, true, apiKey, baseUrl, model);
+  const finalData = await makeApiCallWithRetry(messages, true, apiKey, baseUrl, model);
 
   steps.push({ title: "Final Answer", content: finalData });
   displaySteps(responseContainer, steps);
@@ -158,7 +209,7 @@ async function makeApiCall(messages, isFinalAnswer, apiKey, baseUrl, model) {
 
   } catch (error) {
     console.error("Error making API call:", error);
-    return 'An error occurred while generating the response.\\n{ title: "Error", next_action: "final_answer" }';
+    throw error;
   }
 }
 
@@ -257,7 +308,6 @@ function appendStep(container, step) {
 function displaySteps(container, steps) {
   container.innerHTML = "";
   steps.forEach((step, index) => {
-    const isFinal = index === steps.length - 1;
-    appendStep(container, step, isFinal);
+    appendStep(container, step);
   });
 }
