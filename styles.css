@@ -10,6 +10,9 @@
   --input-bg-color: #1e1e1e;
   --border-color: #333333;
   --gray-color: #808080;
+  --log-info-color: #4CAF50;
+  --log-error-color: #F44336;
+  --log-warning-color: #FF9800;
 }
 
 body {
@@ -215,4 +218,44 @@ code {
 #toggleSettings {
   display: block;
   margin: 20px auto;
+}
+
+#activityLog {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #1e1e1e;
+  border-radius: 12px;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.03);
+}
+
+#activityLogContent {
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  padding: 10px 0;
+}
+
+.log-entry {
+  padding: 5px 10px;
+  margin: 5px 0;
+  border-radius: 4px;
+}
+
+.log-info {
+  color: var(--log-info-color);
+}
+
+.log-error {
+  color: var(--log-error-color);
+}
+
+.log-warning {
+  color: var(--log-warning-color);
+}
+
+.countdown {
+  display: inline-block;
+  font-weight: bold;
+  min-width: 30px;
 }

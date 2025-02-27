@@ -23,6 +23,72 @@ const retryDelayManager = {
   save: (delay) => localStorage.setItem('retryDelay', delay)
 };
 
+// Activity logging functions
+const logManager = {
+  container: null,
+  
+  init() {
+    this.container = document.getElementById('activityLogContent');
+    this.clearLogs();
+  },
+  
+  clearLogs() {
+    if (this.container) {
+      this.container.innerHTML = '';
+    }
+  },
+  
+  log(message, type = 'info') {
+    console.log(message);
+    this._appendToLog(message, type);
+  },
+  
+  error(message) {
+    console.error(message);
+    this._appendToLog(message, 'error');
+  },
+  
+  warn(message) {
+    console.warn(message);
+    this._appendToLog(message, 'warning');
+  },
+  
+  _appendToLog(message, type) {
+    if (!this.container) return;
+    
+    const logEntry = document.createElement('div');
+    logEntry.className = `log-entry log-${type}`;
+    logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    this.container.appendChild(logEntry);
+    this.container.scrollTop = this.container.scrollHeight;
+  },
+  
+  startCountdown(seconds, onComplete) {
+    const countdownId = Date.now();
+    const countdownElement = document.createElement('div');
+    countdownElement.className = 'log-entry log-warning';
+    countdownElement.innerHTML = `[${new Date().toLocaleTimeString()}] Retrying in <span class="countdown" id="countdown-${countdownId}">${seconds}</span> seconds...`;
+    this.container.appendChild(countdownElement);
+    
+    let remainingSeconds = seconds;
+    const intervalId = setInterval(() => {
+      remainingSeconds--;
+      const countdownSpan = document.getElementById(`countdown-${countdownId}`);
+      if (countdownSpan) {
+        countdownSpan.textContent = remainingSeconds;
+      }
+      
+      if (remainingSeconds <= 0) {
+        clearInterval(intervalId);
+        this.log("Retrying now...");
+        if (onComplete) onComplete();
+      }
+    }, 1000);
+    
+    return intervalId;
+  }
+};
+
 document.getElementById("saveApiKey").addEventListener("click", () => {
   const apiKey = document.getElementById("apiKeyInput").value;
   if (apiKey) {
@@ -80,6 +146,19 @@ document.getElementById("toggleSettings").addEventListener("click", () => {
   document.getElementById("toggleSettings").textContent = isHidden ? "Show Settings" : "Hide Settings";
 });
 
+document.getElementById("toggleActivityLog").addEventListener("click", () => {
+  const logContent = document.getElementById("activityLogContent");
+  const button = document.getElementById("toggleActivityLog");
+  
+  if (logContent.style.display === "none") {
+    logContent.style.display = "block";
+    button.textContent = "Hide Log";
+  } else {
+    logContent.style.display = "none";
+    button.textContent = "Show Log";
+  }
+});
+
 window.addEventListener('load', () => {
   const savedApiKey = apiKeyManager.get();
   const savedBaseUrl = baseUrlManager.get();
@@ -98,6 +177,9 @@ window.addEventListener('load', () => {
   }
   document.getElementById('retryAttemptsInput').value = savedRetryAttempts;
   document.getElementById('retryDelayInput').value = savedRetryDelay;
+  
+  // Initialize log manager
+  logManager.init();
 });
 
 import 'https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js';
@@ -123,6 +205,11 @@ document.getElementById("submitQuery").addEventListener("click", async () => {
   const timeContainer = document.getElementById("timeContainer");
   responseContainer.innerHTML = '<div class="generating">Generating response...</div>';
   timeContainer.innerHTML = "";
+  
+  // Clear logs on new query
+  logManager.clearLogs();
+  logManager.log(`Starting new query: "${userQuery.substring(0, 50)}${userQuery.length > 50 ? '...' : ''}"`, 'info');
+  logManager.log(`Using model: ${model}`, 'info');
 
   const messages = [
     { role: "system", content: `You are G1, a model designed to spend some time thinking before you respond, much like a person would. Throughout your initial state processing, you are supposed to learn how to refine your thinking process, try different strategies, and recognize any mistakes you might have made in previous thinking steps.
@@ -152,15 +239,25 @@ Example of a valid thinking step:
 
   async function makeApiCallWithRetry(messages, isFinalAnswer, apiKey, baseUrl, model, retriesRemaining = maxRetries) {
     try {
-      return await makeApiCall(messages, isFinalAnswer, apiKey, baseUrl, model);
+      logManager.log(`Making API call (${isFinalAnswer ? 'final answer' : 'step ' + stepCount})...`);
+      const result = await makeApiCall(messages, isFinalAnswer, apiKey, baseUrl, model);
+      logManager.log('API call successful', 'info');
+      return result;
     } catch (error) {
+      logManager.error(`API call failed: ${error.message || 'Unknown error'}`);
+      
       if (retriesRemaining > 0) {
-        console.log(`API call failed, retrying in ${retryDelay / 1000} seconds. ${retriesRemaining} retries remaining.`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-        return makeApiCallWithRetry(messages, isFinalAnswer, apiKey, baseUrl, model, retriesRemaining - 1);
+        const delayInSeconds = retryDelay / 1000;
+        logManager.warn(`Retrying in ${delayInSeconds} seconds. ${retriesRemaining} ${retriesRemaining === 1 ? 'retry' : 'retries'} remaining.`);
+        
+        return new Promise(resolve => {
+          logManager.startCountdown(delayInSeconds, () => {
+            resolve(makeApiCallWithRetry(messages, isFinalAnswer, apiKey, baseUrl, model, retriesRemaining - 1));
+          });
+        });
       } else {
-        console.error("API call failed after multiple retries:", error);
-        return 'An error occurred while generating the response after multiple retries.\\n{ title: "Error", next_action: "final_answer" }';
+        logManager.error("API call failed after multiple retries");
+        return 'An error occurred while generating the response after multiple retries.\\n{ "title": "Error", "next_action": "final_answer" }';
       }
     }
   }
@@ -173,22 +270,32 @@ Example of a valid thinking step:
     totalThinkingTime += thinkingTime;
 
     steps.push({ title: `Step ${stepCount}: ${stepData.title}`, content: stepData.content, thinkingTime });
+    logManager.log(`Completed step ${stepCount}: ${stepData.title} in ${thinkingTime.toFixed(2)}s`, 'info');
 
     appendStep(responseContainer, steps[steps.length - 1]);
 
     messages.push({ role: "assistant", content: stepRaw });
 
     if (stepData.next_action === 'final_answer' || stepCount > 25) {
+      if (stepCount > 25) {
+        logManager.warn("Reached maximum step count (25). Stopping thinking process.");
+      } else {
+        logManager.log("Thinking process complete. Generating final answer.", 'info');
+      }
       break;
     } else {
       messages.push({ role: "user", content: "Please continue with your thought process. Make sure to re-examine your previous steps and focus on your target. Implement the strategies and methods by writing them down, rather than just imagining them and their outcomes." });
+      logManager.log("Continuing to next thinking step...");
     }
     stepCount++;
   }
 
   timeContainer.innerHTML = `<strong>Total thinking time: ${totalThinkingTime.toFixed(2)} seconds</strong>`;
   messages.push({ role: "user", content: "Looks like you are finally done thinking! Please provide your final answer to the user based on the reasoning above." });
+  
+  logManager.log("Requesting final answer...");
   const finalData = await makeApiCallWithRetry(messages, true, apiKey, baseUrl, model);
+  logManager.log("Final answer received", 'info');
 
   steps.push({ title: "Final Answer", content: finalData });
   displaySteps(responseContainer, steps);
@@ -198,6 +305,7 @@ async function makeApiCall(messages, isFinalAnswer, apiKey, baseUrl, model) {
   try {
     const openai = new OpenAI({ baseURL: baseUrl, apiKey, dangerouslyAllowBrowser: true });
 
+    logManager.log(`Sending request to ${baseUrl} for model ${model}`);
     const response = await openai.chat.completions.create({
       model: model,
       messages,
@@ -208,7 +316,7 @@ async function makeApiCall(messages, isFinalAnswer, apiKey, baseUrl, model) {
     return responseContent;
 
   } catch (error) {
-    console.error("Error making API call:", error);
+    logManager.error(`Error details: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`);
     throw error;
   }
 }
@@ -310,4 +418,5 @@ function displaySteps(container, steps) {
   steps.forEach((step, index) => {
     appendStep(container, step);
   });
+  logManager.log(`Displayed ${steps.length} steps`, 'info');
 }
