@@ -4,54 +4,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>g1: Llama-3.1 Reasoning Chains</title>
+  <title>g1 Chat: AI with Reasoning Chains</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-  <div class="container">
-    <div class="heading">g1: Using Llama-3.1 70b on Groq to create o1-like reasoning chains</div>
-    <p>This is an early prototype of using prompting to create o1-like reasoning chains to improve output accuracy. It is not perfect and accuracy has yet to be formally evaluated. It is powered by Groq so that the reasoning step is fast!</p>
+  <div class="chat-container">
+    <!-- Header -->
+    <header class="chat-header">
+      <h1>g1 Chat</h1>
+      <p class="subtitle">AI Assistant with Chain-of-Thought Reasoning</p>
+      <div class="header-actions">
+        <button id="newChatBtn" class="icon-btn" title="New Chat">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button id="toggleSettings" class="icon-btn" title="Settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button id="toggleActivityLog" class="icon-btn" title="Activity Log">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </button>
+      </div>
+    </header>
 
-    <button id="toggleSettings">Show Settings</button>
-
-    <div id="settings" class="hidden">
-      <div class="input-group">
-        <input type="password" id="apiKeyInput" placeholder="Enter your Groq API key">
-        <button id="saveApiKey">Save API Key</button>
-      </div>
-      <div class="input-group">
-        <input type="text" id="baseUrlInput" placeholder="Enter Base URL (default: https://api.groq.com/openai/v1)">
-        <button id="saveBaseUrl">Save Base URL</button>
-      </div>
-      <div class="input-group">
-        <input type="text" id="modelInput" placeholder="Enter Model (default: llama-3.1-70b-versatile)">
-        <button id="saveModel">Save Model</button>
-      </div>
-      <div class="input-group">
-        <input type="number" id="retryAttemptsInput" placeholder="Retry Attempts (default: 3)">
-        <button id="saveRetryAttempts">Save Retry Attempts</button>
-      </div>
-      <div class="input-group">
-        <input type="number" id="retryDelayInput" placeholder="Retry Delay (seconds, default: 30)">
-        <button id="saveRetryDelay">Save Retry Delay</button>
+    <!-- Settings Panel -->
+    <div id="settings" class="settings-panel hidden">
+      <div class="settings-content">
+        <h3>Settings</h3>
+        <div class="setting-group">
+          <label for="apiKeyInput">API Key</label>
+          <input type="password" id="apiKeyInput" placeholder="Enter your Groq API key">
+        </div>
+        <div class="setting-group">
+          <label for="baseUrlInput">Base URL</label>
+          <input type="text" id="baseUrlInput" placeholder="https://api.groq.com/openai/v1">
+        </div>
+        <div class="setting-group">
+          <label for="modelInput">Model</label>
+          <input type="text" id="modelInput" placeholder="llama-3.1-70b-versatile">
+        </div>
+        <div class="setting-row">
+          <div class="setting-group half">
+            <label for="retryAttemptsInput">Retry Attempts</label>
+            <input type="number" id="retryAttemptsInput" placeholder="3">
+          </div>
+          <div class="setting-group half">
+            <label for="retryDelayInput">Retry Delay (s)</label>
+            <input type="number" id="retryDelayInput" placeholder="30">
+          </div>
+        </div>
+        <button id="saveSettings" class="save-btn">Save Settings</button>
       </div>
     </div>
 
-    <div class="input-group">
-      <textarea id="userQuery" placeholder="e.g., How many 'r's are in the word strawberry?" rows="4"></textarea>
-      <button id="submitQuery">Submit</button>
-    </div>
-
-    <div id="responseContainer"></div>
-    <div id="activityLog">
-      <div class="titleWrapper">
-        <title>Backend Activity Log</title>
-        <button class="toggleButton" id="toggleActivityLog">Hide Log</button>
+    <!-- Activity Log Panel -->
+    <div id="activityLog" class="activity-panel hidden">
+      <div class="activity-header">
+        <h3>Activity Log</h3>
+        <button id="closeActivityLog" class="close-btn">&times;</button>
       </div>
       <div id="activityLogContent"></div>
     </div>
-    <div id="timeContainer"></div>
+
+    <!-- Chat Messages Area -->
+    <div id="chatMessages" class="chat-messages">
+      <div class="welcome-message">
+        <div class="welcome-icon">🧠</div>
+        <h2>Welcome to g1 Chat</h2>
+        <p>I'm an AI assistant that thinks step-by-step before answering. Ask me anything and I'll show you my reasoning process!</p>
+        <div class="example-prompts">
+          <button class="example-btn">How many 'r's are in strawberry?</button>
+          <button class="example-btn">Explain quantum entanglement simply</button>
+          <button class="example-btn">What's the best approach to learn a new language?</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="chat-input-area">
+      <div class="input-wrapper">
+        <textarea id="userQuery" placeholder="Type your message..." rows="1"></textarea>
+        <button id="submitQuery" class="send-btn" title="Send message">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+      <div id="timeContainer" class="time-info"></div>
+    </div>
   </div>
 
   <script type="module" src="script.js"></script>
