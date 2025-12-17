@@ -6,8 +6,11 @@ async function loadDependencies() {
   if (md && OpenAI) return true;
   
   try {
-    // Load markdown-it
+    // Load markdown-it (UMD module that sets global markdownit)
     await import('https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js');
+    if (typeof markdownit === 'undefined') {
+      throw new Error('markdownit not available after import');
+    }
     md = new markdownit();
     
     // Load OpenAI
@@ -295,6 +298,14 @@ const uiManager = {
     this.userQuery.style.height = 'auto';
   },
   
+  getInputValue() {
+    return this.userQuery.value.trim();
+  },
+  
+  showSettings() {
+    document.getElementById('settings').classList.remove('hidden');
+  },
+  
   escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -405,11 +416,11 @@ async function handleQuery() {
 
   if (!apiKey) {
     alert('Please save your API key first in Settings.');
-    document.getElementById('settings').classList.remove('hidden');
+    uiManager.showSettings();
     return;
   }
 
-  const userQuery = document.getElementById("userQuery").value.trim();
+  const userQuery = uiManager.getInputValue();
   if (!userQuery) return;
 
   uiManager.setProcessing(true);

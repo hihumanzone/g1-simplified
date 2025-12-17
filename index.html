@@ -29,32 +29,30 @@
 
     <!-- Settings Panel -->
     <div id="settings" class="settings-panel hidden">
-      <div class="settings-content">
-        <h3>Settings</h3>
-        <div class="setting-group">
-          <label for="apiKeyInput">API Key</label>
-          <input type="password" id="apiKeyInput" placeholder="Enter your Groq API key">
-        </div>
-        <div class="setting-group">
-          <label for="baseUrlInput">Base URL</label>
-          <input type="text" id="baseUrlInput" placeholder="https://api.groq.com/openai/v1">
-        </div>
-        <div class="setting-group">
-          <label for="modelInput">Model</label>
-          <input type="text" id="modelInput" placeholder="llama-3.1-70b-versatile">
-        </div>
-        <div class="setting-row">
-          <div class="setting-group half">
-            <label for="retryAttemptsInput">Retry Attempts</label>
-            <input type="number" id="retryAttemptsInput" placeholder="3">
-          </div>
-          <div class="setting-group half">
-            <label for="retryDelayInput">Retry Delay (s)</label>
-            <input type="number" id="retryDelayInput" placeholder="30">
-          </div>
-        </div>
-        <button id="saveSettings" class="save-btn">Save Settings</button>
+      <h3>Settings</h3>
+      <div class="setting-group">
+        <label for="apiKeyInput">API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="Enter your Groq API key">
       </div>
+      <div class="setting-group">
+        <label for="baseUrlInput">Base URL</label>
+        <input type="text" id="baseUrlInput" placeholder="https://api.groq.com/openai/v1">
+      </div>
+      <div class="setting-group">
+        <label for="modelInput">Model</label>
+        <input type="text" id="modelInput" placeholder="llama-3.1-70b-versatile">
+      </div>
+      <div class="setting-row">
+        <div class="setting-group half">
+          <label for="retryAttemptsInput">Retry Attempts</label>
+          <input type="number" id="retryAttemptsInput" placeholder="3">
+        </div>
+        <div class="setting-group half">
+          <label for="retryDelayInput">Retry Delay (s)</label>
+          <input type="number" id="retryDelayInput" placeholder="30">
+        </div>
+      </div>
+      <button id="saveSettings" class="save-btn">Save Settings</button>
     </div>
 
     <!-- Activity Log Panel -->
