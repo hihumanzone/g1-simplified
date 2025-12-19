@@ -208,6 +208,15 @@ code {
   display: none;
 }
 
+.secondary-button {
+  background-color: #2d2d2d;
+  margin-left: 10px;
+}
+
+.secondary-button:hover {
+  background-color: #444444;
+}
+
 #settings {
   margin-bottom: 20px;
   border: 1px solid var(--border-color);
@@ -258,4 +267,24 @@ code {
   display: inline-block;
   font-weight: bold;
   min-width: 30px;
+}
+
+.follow-up-divider {
+  display: flex;
+  align-items: center;
+  margin: 25px 0 15px 0;
+  color: var(--accent-color);
+}
+
+.follow-up-divider::before,
+.follow-up-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.follow-up-divider span {
+  padding: 0 15px;
+  font-size: 14px;
+  font-weight: bold;
 }

@@ -23,6 +23,71 @@ const retryDelayManager = {
   save: (delay) => localStorage.setItem('retryDelay', delay)
 };
 
+// Conversation state manager
+const conversationManager = {
+  messages: [],
+  steps: [],
+  isConversationActive: false,
+  systemPrompt: `You are G1, a model designed to spend some time thinking before you respond, much like a person would. Throughout your initial state processing, you are supposed to learn how to refine your thinking process, try different strategies, and recognize any mistakes you might have made in previous thinking steps.
+
+Your thinking process will be divided into steps. You are supposed to only process one step of your thinking process per request. If that thinking process continues, you will be asked again to continue with what you were doing in a new request, starting fresh to reflect upon previous steps and build upon them. Each thinking step should contain three segments: the first is the thinking content, followed by a title that represents that particular step, and finally, a decision on whether to continue thinking or conclude that you are ready to provide the final response. Use normal text for your thoughts, and at the end of the thinking step, include some JSON-formatted information with the keys 'title' (provide a brief title for the step) and 'next_action' (either 'continue' or 'final_answer').
+
+Use as many reasoning steps as you can, and ensure you cover everything provided in the query. Pay close attention to the main parts and tasks, planning what to do, how to do it, and do it. Essentially, prepare notes, proofs and a roadmap for the final response. Make sure to cover everything, genuinely implementing various methods and strategies, writing detailed solutions, and putting them into practice. Recheck your work, recognize any mistakes from earlier thinking steps, and ensure everything is relevant and connected.
+
+Always explore and use alternative methods for solving the problem. As an LLM, it's possible that you made an error in any of the previous steps. Recheck each thinking step after major steps as part of the process of reflection. It's normal to make mistakes, so carefully examine where you might have gone wrong and correct yourself. You should also apply different strategies and methods to verify your conclusions. Genuinely and seriously re-examine your steps, using at least three methods or strategies, and apply the best possible approaches to achieve the intended goal.
+
+Use \`"next_action": "final_answer"\` when you believe you are ready to provide a final response after all the detailed thinking. Make sure you have gathered sufficient information and notes about what the final response should be like. Aim to be as helpful, accurate, and informative to the user as possible.
+
+Example of a valid thinking step:
+"To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...
+
+{
+"title": "Identifying Key Information",
+"next_action": "continue"
+}"`,
+  
+  reset() {
+    this.messages = [];
+    this.steps = [];
+    this.isConversationActive = false;
+  },
+  
+  initializeNewConversation() {
+    this.messages = [
+      { role: "system", content: this.systemPrompt }
+    ];
+    this.steps = [];
+    this.isConversationActive = true;
+  },
+  
+  addUserQuery(query) {
+    this.messages.push({ role: "user", content: query });
+  },
+  
+  addInitialAssistantMessage() {
+    this.messages.push({ 
+      role: "assistant", 
+      content: "Thank you. I will now think step by step, following my instructions, starting by planning and breaking down everything." 
+    });
+  },
+  
+  addMessage(role, content) {
+    this.messages.push({ role, content });
+  },
+  
+  addStep(step) {
+    this.steps.push(step);
+  },
+  
+  getMessages() {
+    return this.messages;
+  },
+  
+  getSteps() {
+    return this.steps;
+  }
+};
+
 // Activity logging functions
 const logManager = {
   container: null,
@@ -159,6 +224,17 @@ document.getElementById("toggleActivityLog").addEventListener("click", () => {
   }
 });
 
+document.getElementById("newConversation").addEventListener("click", () => {
+  conversationManager.reset();
+  document.getElementById("responseContainer").innerHTML = "";
+  document.getElementById("timeContainer").innerHTML = "";
+  document.getElementById("userQuery").value = "";
+  document.getElementById("userQuery").placeholder = "e.g., How many 'r's are in the word strawberry?";
+  document.getElementById("newConversation").classList.add("hidden");
+  logManager.clearLogs();
+  logManager.log("Started new conversation", 'info');
+});
+
 window.addEventListener('load', () => {
   const savedApiKey = apiKeyManager.get();
   const savedBaseUrl = baseUrlManager.get();
@@ -203,37 +279,49 @@ document.getElementById("submitQuery").addEventListener("click", async () => {
 
   const responseContainer = document.getElementById("responseContainer");
   const timeContainer = document.getElementById("timeContainer");
-  responseContainer.innerHTML = '<div class="generating">Generating response...</div>';
-  timeContainer.innerHTML = "";
+  const newConversationBtn = document.getElementById("newConversation");
+  
+  const isFollowUp = conversationManager.isConversationActive;
   
   // Clear logs on new query
   logManager.clearLogs();
-  logManager.log(`Starting new query: "${userQuery.substring(0, 50)}${userQuery.length > 50 ? '...' : ''}"`, 'info');
+  
+  if (isFollowUp) {
+    logManager.log(`Follow-up question: "${userQuery.substring(0, 50)}${userQuery.length > 50 ? '...' : ''}"`, 'info');
+    // Append a divider for the follow-up in the UI
+    const divider = document.createElement("div");
+    divider.className = "follow-up-divider";
+    divider.innerHTML = `<span>Follow-up Question</span>`;
+    responseContainer.appendChild(divider);
+    
+    // Add the follow-up question to conversation
+    conversationManager.addMessage("user", userQuery);
+    conversationManager.addMessage("assistant", "Thank you for your follow-up question. I will now think step by step, following my instructions, building upon the previous context.");
+  } else {
+    logManager.log(`Starting new query: "${userQuery.substring(0, 50)}${userQuery.length > 50 ? '...' : ''}"`, 'info');
+    responseContainer.innerHTML = '<div class="generating">Generating response...</div>';
+    timeContainer.innerHTML = "";
+    
+    // Initialize new conversation
+    conversationManager.initializeNewConversation();
+    conversationManager.addUserQuery(userQuery);
+    conversationManager.addInitialAssistantMessage();
+  }
   logManager.log(`Using model: ${model}`, 'info');
+  
+  // Show the "New Conversation" button
+  newConversationBtn.classList.remove("hidden");
+  
+  // Update placeholder for follow-up questions
+  document.getElementById("userQuery").placeholder = "Ask a follow-up question...";
+  document.getElementById("userQuery").value = "";
 
-  const messages = [
-    { role: "system", content: `You are G1, a model designed to spend some time thinking before you respond, much like a person would. Throughout your initial state processing, you are supposed to learn how to refine your thinking process, try different strategies, and recognize any mistakes you might have made in previous thinking steps.
+  const messages = conversationManager.getMessages();
 
-Your thinking process will be divided into steps. You are supposed to only process one step of your thinking process per request. If that thinking process continues, you will be asked again to continue with what you were doing in a new request, starting fresh to reflect upon previous steps and build upon them. Each thinking step should contain three segments: the first is the thinking content, followed by a title that represents that particular step, and finally, a decision on whether to continue thinking or conclude that you are ready to provide the final response. Use normal text for your thoughts, and at the end of the thinking step, include some JSON-formatted information with the keys 'title' (provide a brief title for the step) and 'next_action' (either 'continue' or 'final_answer').
-
-Use as many reasoning steps as you can, and ensure you cover everything provided in the query. Pay close attention to the main parts and tasks, planning what to do, how to do it, and do it. Essentially, prepare notes, proofs and a roadmap for the final response. Make sure to cover everything, genuinely implementing various methods and strategies, writing detailed solutions, and putting them into practice. Recheck your work, recognize any mistakes from earlier thinking steps, and ensure everything is relevant and connected.
-
-Always explore and use alternative methods for solving the problem. As an LLM, it's possible that you made an error in any of the previous steps. Recheck each thinking step after major steps as part of the process of reflection. It’s normal to make mistakes, so carefully examine where you might have gone wrong and correct yourself. You should also apply different strategies and methods to verify your conclusions. Genuinely and seriously re-examine your steps, using at least three methods or strategies, and apply the best possible approaches to achieve the intended goal.
-
-Use \`"next_action": "final_answer"\` when you believe you are ready to provide a final response after all the detailed thinking. Make sure you have gathered sufficient information and notes about what the final response should be like. Aim to be as helpful, accurate, and informative to the user as possible.
-
-Example of a valid thinking step:
-“To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...
-
-{
-"title": "Identifying Key Information",
-"next_action": "continue"
-}“` },
-    { role: "user", content: userQuery },
-    { role: "assistant", content: "Thank you. I will now think step by step, following my instructions, starting by planning and breaking down everything." }
-    ];
-
-  const steps = [];
+  // Remove the "Generating..." message if this is the first query
+  if (!isFollowUp) {
+    responseContainer.innerHTML = '';
+  }
   let totalThinkingTime = 0;
   let stepCount = 1;
 
@@ -269,12 +357,13 @@ Example of a valid thinking step:
     const thinkingTime = (Date.now() - startTime) / 1000;
     totalThinkingTime += thinkingTime;
 
-    steps.push({ title: `Step ${stepCount}: ${stepData.title}`, content: stepData.content, thinkingTime });
+    const step = { title: `Step ${stepCount}: ${stepData.title}`, content: stepData.content, thinkingTime };
+    conversationManager.addStep(step);
     logManager.log(`Completed step ${stepCount}: ${stepData.title} in ${thinkingTime.toFixed(2)}s`, 'info');
 
-    appendStep(responseContainer, steps[steps.length - 1]);
+    appendStep(responseContainer, step);
 
-    messages.push({ role: "assistant", content: stepRaw });
+    conversationManager.addMessage("assistant", stepRaw);
 
     if (stepData.next_action === 'final_answer' || stepCount > 25) {
       if (stepCount > 25) {
@@ -284,21 +373,26 @@ Example of a valid thinking step:
       }
       break;
     } else {
-      messages.push({ role: "user", content: "Please continue with your thought process. Make sure to re-examine your previous steps and focus on your target. Implement the strategies and methods by writing them down, rather than just imagining them and their outcomes." });
+      conversationManager.addMessage("user", "Please continue with your thought process. Make sure to re-examine your previous steps and focus on your target. Implement the strategies and methods by writing them down, rather than just imagining them and their outcomes.");
       logManager.log("Continuing to next thinking step...");
     }
     stepCount++;
   }
 
   timeContainer.innerHTML = `<strong>Total thinking time: ${totalThinkingTime.toFixed(2)} seconds</strong>`;
-  messages.push({ role: "user", content: "Looks like you are finally done thinking! Please provide your final answer to the user based on the reasoning above." });
+  conversationManager.addMessage("user", "Looks like you are finally done thinking! Please provide your final answer to the user based on the reasoning above.");
   
   logManager.log("Requesting final answer...");
-  const finalData = await makeApiCallWithRetry(messages, true, apiKey, baseUrl, model);
+  const finalData = await makeApiCallWithRetry(conversationManager.getMessages(), true, apiKey, baseUrl, model);
   logManager.log("Final answer received", 'info');
 
-  steps.push({ title: "Final Answer", content: finalData });
-  displaySteps(responseContainer, steps);
+  // Add final answer to conversation history
+  conversationManager.addMessage("assistant", finalData);
+
+  const finalStep = { title: "Final Answer", content: finalData };
+  conversationManager.addStep(finalStep);
+  
+  appendStep(responseContainer, finalStep);
 });
 
 async function makeApiCall(messages, isFinalAnswer, apiKey, baseUrl, model) {
