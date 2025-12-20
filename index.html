@@ -9,20 +9,40 @@
 </head>
 
 <body>
-  <div class="container">
-    <header class="header">
-      <h1 class="heading">g1: Using Llama-3.1 70b on Groq to create o1-like reasoning chains</h1>
-      <p class="subtitle">An early prototype using prompting to create o1-like reasoning chains. Powered by Groq for fast reasoning!</p>
-    </header>
+  <header class="header">
+    <h1 class="heading">g1: Using Llama-3.1 70b on Groq to create o1-like reasoning chains</h1>
+    <p class="subtitle">An early prototype using prompting to create o1-like reasoning chains. Powered by Groq for fast reasoning!</p>
+  </header>
 
-    <button id="toggleSettings" class="settings-toggle">⚙️ Settings</button>
+  <main class="main-content">
+    <div class="query-section">
+      <div class="query-input-wrapper">
+        <textarea id="userQuery" placeholder="e.g., How many 'r's are in the word strawberry?" rows="3" autofocus></textarea>
+        <div class="input-hint">Press <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> to submit</div>
+      </div>
+      <div class="query-actions">
+        <button id="submitQuery" class="primary-button">
+          <span class="btn-text">🚀 Submit</span>
+          <span class="btn-loading hidden">
+            <span class="spinner"></span> Thinking...
+          </span>
+        </button>
+        <button id="newConversation" class="new-conversation-btn hidden">🔄 New Conversation</button>
+        <button id="toggleSettings" class="settings-toggle">⚙️ Settings</button>
+      </div>
+    </div>
 
     <div id="settings" class="settings-panel hidden">
+      <div class="settings-header">
+        <span>⚙️ Configuration</span>
+        <button id="closeSettings" class="close-settings-btn">✕</button>
+      </div>
       <div class="settings-grid">
         <div class="setting-item">
-          <label for="apiKeyInput">API Key</label>
+          <label for="apiKeyInput">API Key <span class="required">*</span></label>
           <div class="setting-input-group">
             <input type="password" id="apiKeyInput" placeholder="Enter your Groq API key">
+            <button id="toggleApiKeyVisibility" class="visibility-btn" title="Show/Hide API Key">👁️</button>
             <button id="saveApiKey" class="save-btn">Save</button>
           </div>
         </div>
@@ -40,14 +60,14 @@
             <button id="saveModel" class="save-btn">Save</button>
           </div>
         </div>
-        <div class="setting-item">
+        <div class="setting-item setting-item-half">
           <label for="retryAttemptsInput">Retry Attempts</label>
           <div class="setting-input-group">
             <input type="number" id="retryAttemptsInput" placeholder="3" min="1">
             <button id="saveRetryAttempts" class="save-btn">Save</button>
           </div>
         </div>
-        <div class="setting-item">
+        <div class="setting-item setting-item-half">
           <label for="retryDelayInput">Retry Delay (s)</label>
           <div class="setting-input-group">
             <input type="number" id="retryDelayInput" placeholder="30" min="0">
@@ -57,32 +77,21 @@
       </div>
     </div>
 
-    <div class="query-section">
-      <div class="query-input-wrapper">
-        <textarea id="userQuery" placeholder="e.g., How many 'r's are in the word strawberry?" rows="3"></textarea>
-      </div>
-      <div class="query-actions">
-        <button id="submitQuery" class="primary-button">
-          <span class="btn-text">Submit</span>
-          <span class="btn-loading hidden">
-            <span class="spinner"></span> Thinking...
-          </span>
-        </button>
-        <button id="newConversation" class="new-conversation-btn hidden">🔄 New Conversation</button>
-      </div>
-    </div>
-
     <div id="responseContainer"></div>
     
     <div id="timeContainer"></div>
+  </main>
 
-    <details id="activityLog" class="activity-log">
-      <summary class="activity-log-header">
-        <span>📋 Activity Log</span>
-      </summary>
-      <div id="activityLogContent"></div>
-    </details>
-  </div>
+  <details id="activityLog" class="activity-log">
+    <summary class="activity-log-header">
+      <span>📋 Activity Log</span>
+    </summary>
+    <div id="activityLogContent"></div>
+  </details>
+
+  <footer class="footer">
+    <p>Built with ❤️ using Groq API</p>
+  </footer>
 
   <script type="module" src="script.js"></script>
 </body>

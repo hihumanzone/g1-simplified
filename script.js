@@ -361,10 +361,15 @@ function appendStep(container, step, isFinalAnswer = false) {
 // Main submit handler
 async function handleSubmit() {
   const query = ui.elements.queryInput.value.trim();
-  if (!query) return;
+  if (!query) {
+    showToast('Please enter a question.', 'error');
+    return;
+  }
 
   if (!config.apiKey.get()) {
-    alert('Please save your API key first in Settings.');
+    showToast('Please save your API key first in Settings.', 'error');
+    document.getElementById('settings').classList.remove('hidden');
+    document.getElementById('apiKeyInput').focus();
     return;
   }
 
@@ -478,9 +483,9 @@ function setupSettingsHandlers() {
       const value = document.getElementById(inputId).value;
       if (value && (!validate || validate(value))) {
         config[configKey].save(value);
-        alert(`${name} saved!`);
+        showToast(`${name} saved!`, 'success');
       } else {
-        alert(`Please enter a valid ${name.toLowerCase()}.`);
+        showToast(`Please enter a valid ${name.toLowerCase()}.`, 'error');
       }
     });
   });
@@ -490,6 +495,43 @@ function setupSettingsHandlers() {
     const panel = document.getElementById('settings');
     panel.classList.toggle('hidden');
   });
+
+  // Close settings button
+  document.getElementById('closeSettings').addEventListener('click', () => {
+    document.getElementById('settings').classList.add('hidden');
+  });
+
+  // API key visibility toggle
+  document.getElementById('toggleApiKeyVisibility').addEventListener('click', () => {
+    const input = document.getElementById('apiKeyInput');
+    const btn = document.getElementById('toggleApiKeyVisibility');
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      btn.textContent = '👁️';
+    }
+  });
+}
+
+// Toast notification
+function showToast(message, type = 'info') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  // Trigger animation
+  requestAnimationFrame(() => toast.classList.add('show'));
+  
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 // Load saved settings
