@@ -1,422 +1,571 @@
-const apiKeyManager = {
-  get: () => localStorage.getItem('groqApiKey'),
-  save: (apiKey) => localStorage.setItem('groqApiKey', apiKey)
-};
-
-const baseUrlManager = {
-  get: () => localStorage.getItem('groqBaseUrl') || 'https://api.groq.com/openai/v1',
-  save: (baseUrl) => localStorage.setItem('groqBaseUrl', baseUrl)
-};
-
-const modelManager = {
-  get: () => localStorage.getItem('groqModel') || 'llama-3.1-70b-versatile',
-  save: (model) => localStorage.setItem('groqModel', model)
-};
-
-const retryAttemptsManager = {
-  get: () => parseInt(localStorage.getItem('retryAttempts')) || 3,
-  save: (attempts) => localStorage.setItem('retryAttempts', attempts)
-};
-
-const retryDelayManager = {
-  get: () => parseInt(localStorage.getItem('retryDelay')) || 30,
-  save: (delay) => localStorage.setItem('retryDelay', delay)
-};
-
-// Activity logging functions
-const logManager = {
-  container: null,
-  
-  init() {
-    this.container = document.getElementById('activityLogContent');
-    this.clearLogs();
+// Configuration managers
+const config = {
+  apiKey: {
+    get: () => localStorage.getItem('groqApiKey'),
+    save: (value) => localStorage.setItem('groqApiKey', value)
   },
-  
-  clearLogs() {
-    if (this.container) {
-      this.container.innerHTML = '';
-    }
+  baseUrl: {
+    get: () => localStorage.getItem('groqBaseUrl') || 'https://api.groq.com/openai/v1',
+    save: (value) => localStorage.setItem('groqBaseUrl', value)
   },
-  
-  log(message, type = 'info') {
-    console.log(message);
-    this._appendToLog(message, type);
+  model: {
+    get: () => localStorage.getItem('groqModel') || 'llama-3.1-70b-versatile',
+    save: (value) => localStorage.setItem('groqModel', value)
   },
-  
-  error(message) {
-    console.error(message);
-    this._appendToLog(message, 'error');
+  retryAttempts: {
+    get: () => parseInt(localStorage.getItem('retryAttempts')) || 3,
+    save: (value) => localStorage.setItem('retryAttempts', value)
   },
-  
-  warn(message) {
-    console.warn(message);
-    this._appendToLog(message, 'warning');
-  },
-  
-  _appendToLog(message, type) {
-    if (!this.container) return;
-    
-    const logEntry = document.createElement('div');
-    logEntry.className = `log-entry log-${type}`;
-    logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-    this.container.appendChild(logEntry);
-    this.container.scrollTop = this.container.scrollHeight;
-  },
-  
-  startCountdown(seconds, onComplete) {
-    const countdownId = Date.now();
-    const countdownElement = document.createElement('div');
-    countdownElement.className = 'log-entry log-warning';
-    countdownElement.innerHTML = `[${new Date().toLocaleTimeString()}] Retrying in <span class="countdown" id="countdown-${countdownId}">${seconds}</span> seconds...`;
-    this.container.appendChild(countdownElement);
-    
-    let remainingSeconds = seconds;
-    const intervalId = setInterval(() => {
-      remainingSeconds--;
-      const countdownSpan = document.getElementById(`countdown-${countdownId}`);
-      if (countdownSpan) {
-        countdownSpan.textContent = remainingSeconds;
-      }
-      
-      if (remainingSeconds <= 0) {
-        clearInterval(intervalId);
-        this.log("Retrying now...");
-        if (onComplete) onComplete();
-      }
-    }, 1000);
-    
-    return intervalId;
+  retryDelay: {
+    get: () => parseInt(localStorage.getItem('retryDelay')) || 30,
+    save: (value) => localStorage.setItem('retryDelay', value)
   }
 };
 
-document.getElementById("saveApiKey").addEventListener("click", () => {
-  const apiKey = document.getElementById("apiKeyInput").value;
-  if (apiKey) {
-    apiKeyManager.save(apiKey);
-    alert('API key saved!');
-  } else {
-    alert('Please enter a valid API key.');
-  }
-});
-
-document.getElementById("saveBaseUrl").addEventListener("click", () => {
-  const baseUrl = document.getElementById("baseUrlInput").value;
-  if (baseUrl) {
-    baseUrlManager.save(baseUrl);
-    alert('Base URL saved!');
-  } else {
-    alert('Please enter a valid Base URL.');
-  }
-});
-
-document.getElementById("saveModel").addEventListener("click", () => {
-  const model = document.getElementById("modelInput").value;
-  if (model) {
-    modelManager.save(model);
-    alert('Model saved!');
-  } else {
-    alert('Please enter a valid model.');
-  }
-});
-
-document.getElementById("saveRetryAttempts").addEventListener("click", () => {
-  const retryAttempts = document.getElementById("retryAttemptsInput").value;
-  if (retryAttempts && !isNaN(retryAttempts) && retryAttempts > 0) {
-    retryAttemptsManager.save(retryAttempts);
-    alert('Retry attempts saved!');
-  } else {
-    alert('Please enter a valid number greater than 0 for retry attempts.');
-  }
-});
-
-document.getElementById("saveRetryDelay").addEventListener("click", () => {
-  const retryDelay = document.getElementById("retryDelayInput").value;
-  if (retryDelay && !isNaN(retryDelay) && retryDelay >= 0) {
-    retryDelayManager.save(retryDelay);
-    alert('Retry delay saved!');
-  } else {
-    alert('Please enter a valid number (0 or greater) for retry delay.');
-  }
-});
-
-document.getElementById("toggleSettings").addEventListener("click", () => {
-  const settingsDiv = document.getElementById("settings");
-  const isHidden = settingsDiv.classList.contains("hidden");
-  settingsDiv.classList.toggle("hidden", !isHidden);
-  document.getElementById("toggleSettings").textContent = isHidden ? "Show Settings" : "Hide Settings";
-});
-
-document.getElementById("toggleActivityLog").addEventListener("click", () => {
-  const logContent = document.getElementById("activityLogContent");
-  const button = document.getElementById("toggleActivityLog");
-  
-  if (logContent.style.display === "none") {
-    logContent.style.display = "block";
-    button.textContent = "Hide Log";
-  } else {
-    logContent.style.display = "none";
-    button.textContent = "Show Log";
-  }
-});
-
-window.addEventListener('load', () => {
-  const savedApiKey = apiKeyManager.get();
-  const savedBaseUrl = baseUrlManager.get();
-  const savedModel = modelManager.get();
-  const savedRetryAttempts = retryAttemptsManager.get();
-  const savedRetryDelay = retryDelayManager.get();
-
-  if (savedApiKey) {
-    document.getElementById('apiKeyInput').value = savedApiKey;
-  }
-  if (savedBaseUrl) {
-    document.getElementById('baseUrlInput').value = savedBaseUrl;
-  }
-  if (savedModel) {
-    document.getElementById('modelInput').value = savedModel;
-  }
-  document.getElementById('retryAttemptsInput').value = savedRetryAttempts;
-  document.getElementById('retryDelayInput').value = savedRetryDelay;
-  
-  // Initialize log manager
-  logManager.init();
-});
-
-import 'https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js';
-const md = new markdownit();
-const { OpenAI } = await import("https://esm.run/openai");
-
-document.getElementById("submitQuery").addEventListener("click", async () => {
-  const apiKey = apiKeyManager.get();
-  const baseUrl = baseUrlManager.get();
-  const model = modelManager.get();
-  const maxRetries = retryAttemptsManager.get();
-  const retryDelay = retryDelayManager.get() * 1000;
-
-  if (!apiKey) {
-    alert('Please save your API key first.');
-    return;
-  }
-
-  const userQuery = document.getElementById("userQuery").value;
-  if (!userQuery) return;
-
-  const responseContainer = document.getElementById("responseContainer");
-  const timeContainer = document.getElementById("timeContainer");
-  responseContainer.innerHTML = '<div class="generating">Generating response...</div>';
-  timeContainer.innerHTML = "";
-  
-  // Clear logs on new query
-  logManager.clearLogs();
-  logManager.log(`Starting new query: "${userQuery.substring(0, 50)}${userQuery.length > 50 ? '...' : ''}"`, 'info');
-  logManager.log(`Using model: ${model}`, 'info');
-
-  const messages = [
-    { role: "system", content: `You are G1, a model designed to spend some time thinking before you respond, much like a person would. Throughout your initial state processing, you are supposed to learn how to refine your thinking process, try different strategies, and recognize any mistakes you might have made in previous thinking steps.
+// System prompt constant
+const SYSTEM_PROMPT = `You are G1, a model designed to spend some time thinking before you respond, much like a person would. Throughout your initial state processing, you are supposed to learn how to refine your thinking process, try different strategies, and recognize any mistakes you might have made in previous thinking steps.
 
 Your thinking process will be divided into steps. You are supposed to only process one step of your thinking process per request. If that thinking process continues, you will be asked again to continue with what you were doing in a new request, starting fresh to reflect upon previous steps and build upon them. Each thinking step should contain three segments: the first is the thinking content, followed by a title that represents that particular step, and finally, a decision on whether to continue thinking or conclude that you are ready to provide the final response. Use normal text for your thoughts, and at the end of the thinking step, include some JSON-formatted information with the keys 'title' (provide a brief title for the step) and 'next_action' (either 'continue' or 'final_answer').
 
 Use as many reasoning steps as you can, and ensure you cover everything provided in the query. Pay close attention to the main parts and tasks, planning what to do, how to do it, and do it. Essentially, prepare notes, proofs and a roadmap for the final response. Make sure to cover everything, genuinely implementing various methods and strategies, writing detailed solutions, and putting them into practice. Recheck your work, recognize any mistakes from earlier thinking steps, and ensure everything is relevant and connected.
 
-Always explore and use alternative methods for solving the problem. As an LLM, it's possible that you made an error in any of the previous steps. Recheck each thinking step after major steps as part of the process of reflection. It’s normal to make mistakes, so carefully examine where you might have gone wrong and correct yourself. You should also apply different strategies and methods to verify your conclusions. Genuinely and seriously re-examine your steps, using at least three methods or strategies, and apply the best possible approaches to achieve the intended goal.
+Always explore and use alternative methods for solving the problem. As an LLM, it's possible that you made an error in any of the previous steps. Recheck each thinking step after major steps as part of the process of reflection. It's normal to make mistakes, so carefully examine where you might have gone wrong and correct yourself. You should also apply different strategies and methods to verify your conclusions. Genuinely and seriously re-examine your steps, using at least three methods or strategies, and apply the best possible approaches to achieve the intended goal.
 
 Use \`"next_action": "final_answer"\` when you believe you are ready to provide a final response after all the detailed thinking. Make sure you have gathered sufficient information and notes about what the final response should be like. Aim to be as helpful, accurate, and informative to the user as possible.
 
 Example of a valid thinking step:
-“To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...
+"To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...
 
 {
 "title": "Identifying Key Information",
 "next_action": "continue"
-}“` },
-    { role: "user", content: userQuery },
-    { role: "assistant", content: "Thank you. I will now think step by step, following my instructions, starting by planning and breaking down everything." }
-    ];
+}"`;
 
-  const steps = [];
-  let totalThinkingTime = 0;
-  let stepCount = 1;
+const INITIAL_ASSISTANT_MESSAGE = "Thank you. I will now think step by step, following my instructions, starting by planning and breaking down everything.";
+const FOLLOWUP_ASSISTANT_MESSAGE = "Thank you for your follow-up question. I will now think step by step, following my instructions, building upon the previous context.";
+const CONTINUE_PROMPT = "Please continue with your thought process. Make sure to re-examine your previous steps and focus on your target. Implement the strategies and methods by writing them down, rather than just imagining them and their outcomes.";
+const FINAL_PROMPT = "Looks like you are finally done thinking! Please provide your final answer to the user based on the reasoning above.";
+const MAX_STEPS = 25;
 
-  async function makeApiCallWithRetry(messages, isFinalAnswer, apiKey, baseUrl, model, retriesRemaining = maxRetries) {
-    try {
-      logManager.log(`Making API call (${isFinalAnswer ? 'final answer' : 'step ' + stepCount})...`);
-      const result = await makeApiCall(messages, isFinalAnswer, apiKey, baseUrl, model);
-      logManager.log('API call successful', 'info');
-      return result;
-    } catch (error) {
-      logManager.error(`API call failed: ${error.message || 'Unknown error'}`);
-      
-      if (retriesRemaining > 0) {
-        const delayInSeconds = retryDelay / 1000;
-        logManager.warn(`Retrying in ${delayInSeconds} seconds. ${retriesRemaining} ${retriesRemaining === 1 ? 'retry' : 'retries'} remaining.`);
-        
-        return new Promise(resolve => {
-          logManager.startCountdown(delayInSeconds, () => {
-            resolve(makeApiCallWithRetry(messages, isFinalAnswer, apiKey, baseUrl, model, retriesRemaining - 1));
-          });
-        });
-      } else {
-        logManager.error("API call failed after multiple retries");
-        return 'An error occurred while generating the response after multiple retries.\\n{ "title": "Error", "next_action": "final_answer" }';
-      }
-    }
+// Conversation state manager
+const conversation = {
+  messages: [],
+  steps: [],
+  isActive: false,
+  currentQuery: '',
+
+  reset() {
+    this.messages = [];
+    this.steps = [];
+    this.isActive = false;
+    this.currentQuery = '';
+  },
+
+  initialize(query) {
+    this.messages = [{ role: "system", content: SYSTEM_PROMPT }];
+    this.steps = [];
+    this.isActive = true;
+    this.currentQuery = query;
+    this.addMessage("user", query);
+    this.addMessage("assistant", INITIAL_ASSISTANT_MESSAGE);
+  },
+
+  addFollowUp(query) {
+    this.currentQuery = query;
+    this.addMessage("user", query);
+    this.addMessage("assistant", FOLLOWUP_ASSISTANT_MESSAGE);
+  },
+
+  addMessage(role, content) {
+    this.messages.push({ role, content });
+  },
+
+  addStep(step) {
+    this.steps.push(step);
   }
+};
 
-  while (true) {
-    const startTime = Date.now();
-    const stepRaw = await makeApiCallWithRetry(messages, false, apiKey, baseUrl, model);
-    const stepData = extractJsonFromResponse(stepRaw);
-    const thinkingTime = (Date.now() - startTime) / 1000;
-    totalThinkingTime += thinkingTime;
+// Activity logger
+const logger = {
+  container: null,
 
-    steps.push({ title: `Step ${stepCount}: ${stepData.title}`, content: stepData.content, thinkingTime });
-    logManager.log(`Completed step ${stepCount}: ${stepData.title} in ${thinkingTime.toFixed(2)}s`, 'info');
+  init() {
+    this.container = document.getElementById('activityLogContent');
+    this.clear();
+  },
 
-    appendStep(responseContainer, steps[steps.length - 1]);
+  clear() {
+    if (this.container) this.container.innerHTML = '';
+  },
 
-    messages.push({ role: "assistant", content: stepRaw });
+  log(message, type = 'info') {
+    console.log(message);
+    this._append(message, type);
+  },
 
-    if (stepData.next_action === 'final_answer' || stepCount > 25) {
-      if (stepCount > 25) {
-        logManager.warn("Reached maximum step count (25). Stopping thinking process.");
-      } else {
-        logManager.log("Thinking process complete. Generating final answer.", 'info');
+  error(message) {
+    console.error(message);
+    this._append(message, 'error');
+  },
+
+  warn(message) {
+    console.warn(message);
+    this._append(message, 'warning');
+  },
+
+  _append(message, type) {
+    if (!this.container) return;
+    const entry = document.createElement('div');
+    entry.className = `log-entry log-${type}`;
+    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    this.container.appendChild(entry);
+    this.container.scrollTop = this.container.scrollHeight;
+  },
+
+  countdown(seconds, onComplete) {
+    const id = Date.now();
+    const entry = document.createElement('div');
+    entry.className = 'log-entry log-warning';
+    entry.innerHTML = `[${new Date().toLocaleTimeString()}] Retrying in <span id="cd-${id}">${seconds}</span>s...`;
+    this.container.appendChild(entry);
+
+    let remaining = seconds;
+    const interval = setInterval(() => {
+      remaining--;
+      const span = document.getElementById(`cd-${id}`);
+      if (span) span.textContent = remaining;
+      if (remaining <= 0) {
+        clearInterval(interval);
+        this.log("Retrying now...");
+        onComplete?.();
       }
-      break;
-    } else {
-      messages.push({ role: "user", content: "Please continue with your thought process. Make sure to re-examine your previous steps and focus on your target. Implement the strategies and methods by writing them down, rather than just imagining them and their outcomes." });
-      logManager.log("Continuing to next thinking step...");
-    }
-    stepCount++;
+    }, 1000);
+    return interval;
   }
+};
 
-  timeContainer.innerHTML = `<strong>Total thinking time: ${totalThinkingTime.toFixed(2)} seconds</strong>`;
-  messages.push({ role: "user", content: "Looks like you are finally done thinking! Please provide your final answer to the user based on the reasoning above." });
+// UI helpers
+const ui = {
+  elements: {},
+
+  init() {
+    this.elements = {
+      submitBtn: document.getElementById('submitQuery'),
+      newConvoBtn: document.getElementById('newConversation'),
+      queryInput: document.getElementById('userQuery'),
+      responseContainer: document.getElementById('responseContainer'),
+      timeContainer: document.getElementById('timeContainer'),
+      settingsPanel: document.getElementById('settings'),
+      settingsToggle: document.getElementById('toggleSettings')
+    };
+  },
+
+  setLoading(isLoading) {
+    const btn = this.elements.submitBtn;
+    btn.disabled = isLoading;
+    btn.querySelector('.btn-text').classList.toggle('hidden', isLoading);
+    btn.querySelector('.btn-loading').classList.toggle('hidden', !isLoading);
+    this.elements.queryInput.disabled = isLoading;
+  },
+
+  showNewConversationBtn() {
+    this.elements.newConvoBtn.classList.remove('hidden');
+  },
+
+  hideNewConversationBtn() {
+    this.elements.newConvoBtn.classList.add('hidden');
+  },
+
+  updatePlaceholder(isFollowUp) {
+    this.elements.queryInput.placeholder = isFollowUp 
+      ? "Ask a follow-up question..." 
+      : "e.g., How many 'r's are in the word strawberry?";
+  },
+
+  clearQuery() {
+    this.elements.queryInput.value = '';
+  },
+
+  showGenerating() {
+    this.elements.responseContainer.innerHTML = `
+      <div class="generating">
+        <div class="spinner-large"></div>
+        <p>Thinking through this step by step...</p>
+      </div>
+    `;
+  },
+
+  clearResponse() {
+    this.elements.responseContainer.innerHTML = '';
+  },
+
+  displayUserQuery(query) {
+    const div = document.createElement('div');
+    div.className = 'user-query-display';
+    div.innerHTML = `
+      <div class="label">Your Question</div>
+      <div class="query-text">${this.escapeHtml(query)}</div>
+    `;
+    this.elements.responseContainer.appendChild(div);
+  },
+
+  appendFollowUpDivider() {
+    const divider = document.createElement('div');
+    divider.className = 'follow-up-divider';
+    divider.innerHTML = '<span>Follow-up</span>';
+    this.elements.responseContainer.appendChild(divider);
+  },
+
+  updateTime(seconds) {
+    this.elements.timeContainer.innerHTML = `<strong>Total thinking time: ${seconds.toFixed(2)} seconds</strong>`;
+  },
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+};
+
+// Import dependencies
+import 'https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js';
+const md = new markdownit();
+const { OpenAI } = await import("https://esm.run/openai");
+
+// API call function
+async function makeApiCall(messages) {
+  const openai = new OpenAI({
+    baseURL: config.baseUrl.get(),
+    apiKey: config.apiKey.get(),
+    dangerouslyAllowBrowser: true
+  });
+
+  logger.log(`Sending request to ${config.baseUrl.get()}`);
+  const response = await openai.chat.completions.create({
+    model: config.model.get(),
+    messages,
+    temperature: 0.2,
+  });
+
+  return response.choices[0].message.content;
+}
+
+// API call with retry logic
+async function makeApiCallWithRetry(messages, stepInfo, retriesRemaining = null) {
+  if (retriesRemaining === null) retriesRemaining = config.retryAttempts.get();
   
-  logManager.log("Requesting final answer...");
-  const finalData = await makeApiCallWithRetry(messages, true, apiKey, baseUrl, model);
-  logManager.log("Final answer received", 'info');
-
-  steps.push({ title: "Final Answer", content: finalData });
-  displaySteps(responseContainer, steps);
-});
-
-async function makeApiCall(messages, isFinalAnswer, apiKey, baseUrl, model) {
   try {
-    const openai = new OpenAI({ baseURL: baseUrl, apiKey, dangerouslyAllowBrowser: true });
-
-    logManager.log(`Sending request to ${baseUrl} for model ${model}`);
-    const response = await openai.chat.completions.create({
-      model: model,
-      messages,
-      temperature: 0.2,
-    });
-
-    const responseContent = response.choices[0].message.content;
-    return responseContent;
-
+    logger.log(`Making API call (${stepInfo})...`);
+    const result = await makeApiCall(messages);
+    logger.log('API call successful', 'info');
+    return result;
   } catch (error) {
-    logManager.error(`Error details: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`);
-    throw error;
+    logger.error(`API call failed: ${error.message || 'Unknown error'}`);
+
+    if (retriesRemaining > 0) {
+      const delay = config.retryDelay.get();
+      logger.warn(`Retrying in ${delay}s. ${retriesRemaining} ${retriesRemaining === 1 ? 'retry' : 'retries'} remaining.`);
+
+      return new Promise(resolve => {
+        logger.countdown(delay, () => {
+          resolve(makeApiCallWithRetry(messages, stepInfo, retriesRemaining - 1));
+        });
+      });
+    } else {
+      logger.error("API call failed after multiple retries");
+      return `An error occurred while generating the response after multiple retries.\n${JSON.stringify({ title: "Error", next_action: "final_answer" })}`;
+    }
   }
 }
 
-function extractJsonFromResponse(responseContent) {
-  const jsonMatches = [...responseContent.matchAll(/\{[\s\S]*?\}/g)];
-
-  if (jsonMatches.length === 0) {
+// Extract JSON from response
+function extractJsonFromResponse(content) {
+  const matches = [...content.matchAll(/\{[\s\S]*?\}/g)];
+  
+  if (matches.length === 0) {
     return { title: "Error", content: "An error occurred while generating the response.", next_action: "final_answer" };
   }
 
-  const lastJsonMatch = jsonMatches[jsonMatches.length - 1];
-  const jsonString = lastJsonMatch[0];
-
-  let parsedJson;
+  const lastMatch = matches[matches.length - 1];
+  let parsed;
+  
   try {
-    parsedJson = JSON.parse(jsonString);
-  } catch (error) {
+    parsed = JSON.parse(lastMatch[0]);
+  } catch {
     return { title: "Error", content: "An error occurred while generating the response.", next_action: "final_answer" };
   }
-
-  const content = responseContent.slice(0, lastJsonMatch.index).trim();
 
   return {
-    content,
-    ...parsedJson
+    content: content.slice(0, lastMatch.index).trim(),
+    ...parsed
   };
 }
 
-function appendStep(container, step) {
+// Append step to UI
+function appendStep(container, step, isFinalAnswer = false) {
   const stepDiv = document.createElement("div");
-  stepDiv.className = "step";
+  stepDiv.className = isFinalAnswer ? "step final-answer" : "step";
 
   const titleWrapper = document.createElement("div");
   titleWrapper.className = "titleWrapper";
 
-  const titleDiv = document.createElement("title");
-  titleDiv.textContent = step.title;
+  const titleEl = document.createElement("title");
+  titleEl.textContent = step.title;
 
-  const contentP = document.createElement("div");
-  contentP.innerHTML = md.render(step.content);
+  const contentDiv = document.createElement("div");
+  contentDiv.innerHTML = md.render(step.content);
 
-  const codeBlocks = contentP.querySelectorAll('pre');
-  codeBlocks.forEach(pre => {
-    const button = document.createElement('button');
-    button.className = 'copy-button';
-    button.textContent = 'Copy';
-
-    button.addEventListener('click', () => {
-      const code = pre.querySelector('code').innerText;
-      navigator.clipboard.writeText(code).then(() => {
-        button.textContent = 'Copied!';
-        setTimeout(() => {
-          button.textContent = 'Copy';
-        }, 2000);
-      }).catch(err => {
-        console.error('Failed to copy:', err);
-        button.textContent = 'Error';
-        setTimeout(() => {
-          button.textContent = 'Copy';
-        }, 2000);
-      });
-    });
-
-    pre.appendChild(button);
-  });
-
-  if (step.title !== "Final Answer") {
-    const toggleButton = document.createElement("button");
-    toggleButton.textContent = "Show Content";
-    toggleButton.className = "toggleButton";
-
-    contentP.style.display = "none";
-
-    toggleButton.addEventListener("click", () => {
-      if (contentP.style.display === "none") {
-        contentP.style.display = "block";
-        toggleButton.textContent = "Hide Content";
-      } else {
-        contentP.style.display = "none";
-        toggleButton.textContent = "Show Content";
+  // Add copy buttons to code blocks
+  contentDiv.querySelectorAll('pre').forEach(pre => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-button';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', async () => {
+      const code = pre.querySelector('code')?.innerText || pre.innerText;
+      try {
+        await navigator.clipboard.writeText(code);
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      } catch {
+        btn.textContent = 'Error';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
       }
     });
+    pre.appendChild(btn);
+  });
 
-    titleWrapper.appendChild(titleDiv);
-    titleWrapper.appendChild(toggleButton);
+  if (!isFinalAnswer) {
+    const toggleBtn = document.createElement("button");
+    toggleBtn.textContent = "Show";
+    toggleBtn.className = "toggleButton";
+    contentDiv.style.display = "none";
+
+    toggleBtn.addEventListener("click", () => {
+      const isHidden = contentDiv.style.display === "none";
+      contentDiv.style.display = isHidden ? "block" : "none";
+      toggleBtn.textContent = isHidden ? "Hide" : "Show";
+    });
+
+    titleWrapper.appendChild(titleEl);
+    titleWrapper.appendChild(toggleBtn);
   } else {
-    contentP.style.display = "block";
-    titleWrapper.appendChild(titleDiv);
+    contentDiv.style.display = "block";
+    titleWrapper.appendChild(titleEl);
   }
 
   stepDiv.appendChild(titleWrapper);
-  stepDiv.appendChild(contentP);
+  stepDiv.appendChild(contentDiv);
   container.appendChild(stepDiv);
 }
 
-function displaySteps(container, steps) {
-  container.innerHTML = "";
-  steps.forEach((step, index) => {
-    appendStep(container, step);
-  });
-  logManager.log(`Displayed ${steps.length} steps`, 'info');
+// Main submit handler
+async function handleSubmit() {
+  const query = ui.elements.queryInput.value.trim();
+  if (!query) {
+    showToast('Please enter a question.', 'error');
+    return;
+  }
+
+  if (!config.apiKey.get()) {
+    showToast('Please save your API key first in Settings.', 'error');
+    document.getElementById('settings').classList.remove('hidden');
+    document.getElementById('apiKeyInput').focus();
+    return;
+  }
+
+  const isFollowUp = conversation.isActive;
+  
+  logger.clear();
+  ui.setLoading(true);
+  ui.clearQuery();
+  ui.updatePlaceholder(true);
+  ui.showNewConversationBtn();
+
+  try {
+    if (isFollowUp) {
+      logger.log(`Follow-up: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`, 'info');
+      ui.appendFollowUpDivider();
+      ui.displayUserQuery(query);
+      conversation.addFollowUp(query);
+    } else {
+      logger.log(`New query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`, 'info');
+      ui.showGenerating();
+      conversation.initialize(query);
+      // Clear generating message and show user query
+      ui.clearResponse();
+      ui.displayUserQuery(query);
+    }
+
+    logger.log(`Using model: ${config.model.get()}`, 'info');
+
+    let totalThinkingTime = 0;
+    let stepCount = 1;
+
+    // Thinking loop
+    while (true) {
+      const startTime = Date.now();
+      const rawResponse = await makeApiCallWithRetry(conversation.messages, `step ${stepCount}`);
+      const stepData = extractJsonFromResponse(rawResponse);
+      const thinkingTime = (Date.now() - startTime) / 1000;
+      totalThinkingTime += thinkingTime;
+
+      const step = {
+        title: `Step ${stepCount}: ${stepData.title}`,
+        content: stepData.content,
+        thinkingTime
+      };
+
+      conversation.addStep(step);
+      conversation.addMessage("assistant", rawResponse);
+      logger.log(`Step ${stepCount}: ${stepData.title} (${thinkingTime.toFixed(2)}s)`, 'info');
+      
+      appendStep(ui.elements.responseContainer, step);
+
+      if (stepData.next_action === 'final_answer' || stepCount >= MAX_STEPS) {
+        if (stepCount >= MAX_STEPS) {
+          logger.warn(`Maximum steps (${MAX_STEPS}) reached.`);
+        } else {
+          logger.log("Thinking complete. Generating final answer.", 'info');
+        }
+        break;
+      }
+
+      conversation.addMessage("user", CONTINUE_PROMPT);
+      stepCount++;
+    }
+
+    // Get final answer
+    conversation.addMessage("user", FINAL_PROMPT);
+    logger.log("Requesting final answer...");
+    
+    const finalResponse = await makeApiCallWithRetry(conversation.messages, "final answer");
+    conversation.addMessage("assistant", finalResponse);
+    logger.log("Final answer received", 'info');
+
+    const finalStep = { title: "Final Answer", content: finalResponse };
+    conversation.addStep(finalStep);
+    appendStep(ui.elements.responseContainer, finalStep, true);
+
+    ui.updateTime(totalThinkingTime);
+
+  } catch (error) {
+    logger.error(`Unexpected error: ${error.message}`);
+    ui.elements.responseContainer.innerHTML = `<div class="step"><div class="titleWrapper"><title>Error</title></div><div>An unexpected error occurred. Please try again.</div></div>`;
+  } finally {
+    ui.setLoading(false);
+  }
 }
+
+// Handle new conversation
+function handleNewConversation() {
+  conversation.reset();
+  ui.clearResponse();
+  ui.elements.timeContainer.innerHTML = '';
+  ui.clearQuery();
+  ui.updatePlaceholder(false);
+  ui.hideNewConversationBtn();
+  logger.clear();
+  logger.log("Started new conversation", 'info');
+}
+
+// Settings save handlers
+function setupSettingsHandlers() {
+  const settings = [
+    { id: 'saveApiKey', inputId: 'apiKeyInput', configKey: 'apiKey', name: 'API key' },
+    { id: 'saveBaseUrl', inputId: 'baseUrlInput', configKey: 'baseUrl', name: 'Base URL' },
+    { id: 'saveModel', inputId: 'modelInput', configKey: 'model', name: 'Model' },
+    { id: 'saveRetryAttempts', inputId: 'retryAttemptsInput', configKey: 'retryAttempts', name: 'Retry attempts', validate: v => !isNaN(v) && v > 0 },
+    { id: 'saveRetryDelay', inputId: 'retryDelayInput', configKey: 'retryDelay', name: 'Retry delay', validate: v => !isNaN(v) && v >= 0 }
+  ];
+
+  settings.forEach(({ id, inputId, configKey, name, validate }) => {
+    document.getElementById(id).addEventListener('click', () => {
+      const value = document.getElementById(inputId).value;
+      if (value && (!validate || validate(value))) {
+        config[configKey].save(value);
+        showToast(`${name} saved!`, 'success');
+      } else {
+        showToast(`Please enter a valid ${name.toLowerCase()}.`, 'error');
+      }
+    });
+  });
+
+  // Settings toggle
+  document.getElementById('toggleSettings').addEventListener('click', () => {
+    const panel = document.getElementById('settings');
+    panel.classList.toggle('hidden');
+  });
+
+  // Close settings button
+  document.getElementById('closeSettings').addEventListener('click', () => {
+    document.getElementById('settings').classList.add('hidden');
+  });
+
+  // API key visibility toggle
+  document.getElementById('toggleApiKeyVisibility').addEventListener('click', () => {
+    const input = document.getElementById('apiKeyInput');
+    const btn = document.getElementById('toggleApiKeyVisibility');
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      btn.textContent = '👁️';
+    }
+  });
+}
+
+// Toast notification
+function showToast(message, type = 'info') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  // Trigger animation
+  requestAnimationFrame(() => toast.classList.add('show'));
+  
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Load saved settings
+function loadSettings() {
+  const savedApiKey = config.apiKey.get();
+  const savedBaseUrl = config.baseUrl.get();
+  const savedModel = config.model.get();
+
+  if (savedApiKey) document.getElementById('apiKeyInput').value = savedApiKey;
+  if (savedBaseUrl) document.getElementById('baseUrlInput').value = savedBaseUrl;
+  if (savedModel) document.getElementById('modelInput').value = savedModel;
+  document.getElementById('retryAttemptsInput').value = config.retryAttempts.get();
+  document.getElementById('retryDelayInput').value = config.retryDelay.get();
+}
+
+// Initialize app
+function init() {
+  ui.init();
+  logger.init();
+  loadSettings();
+  setupSettingsHandlers();
+
+  // Event listeners
+  document.getElementById('submitQuery').addEventListener('click', handleSubmit);
+  document.getElementById('newConversation').addEventListener('click', handleNewConversation);
+
+  // Keyboard shortcut: Ctrl/Cmd + Enter to submit
+  document.getElementById('userQuery').addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      handleSubmit();
+    }
+  });
+}
+
+// Start app when DOM is ready
+document.readyState !== 'loading' ? init() : document.addEventListener('DOMContentLoaded', init);

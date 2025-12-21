@@ -9,50 +9,89 @@
 </head>
 
 <body>
-  <div class="container">
-    <div class="heading">g1: Using Llama-3.1 70b on Groq to create o1-like reasoning chains</div>
-    <p>This is an early prototype of using prompting to create o1-like reasoning chains to improve output accuracy. It is not perfect and accuracy has yet to be formally evaluated. It is powered by Groq so that the reasoning step is fast!</p>
+  <header class="header">
+    <h1 class="heading">g1: Using Llama-3.1 70b on Groq to create o1-like reasoning chains</h1>
+    <p class="subtitle">An early prototype using prompting to create o1-like reasoning chains. Powered by Groq for fast reasoning!</p>
+  </header>
 
-    <button id="toggleSettings">Show Settings</button>
-
-    <div id="settings" class="hidden">
-      <div class="input-group">
-        <input type="password" id="apiKeyInput" placeholder="Enter your Groq API key">
-        <button id="saveApiKey">Save API Key</button>
+  <main class="main-content">
+    <div class="query-section">
+      <div class="query-input-wrapper">
+        <textarea id="userQuery" placeholder="e.g., How many 'r's are in the word strawberry?" rows="3" autofocus></textarea>
+        <div class="input-hint">Press <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> to submit</div>
       </div>
-      <div class="input-group">
-        <input type="text" id="baseUrlInput" placeholder="Enter Base URL (default: https://api.groq.com/openai/v1)">
-        <button id="saveBaseUrl">Save Base URL</button>
-      </div>
-      <div class="input-group">
-        <input type="text" id="modelInput" placeholder="Enter Model (default: llama-3.1-70b-versatile)">
-        <button id="saveModel">Save Model</button>
-      </div>
-      <div class="input-group">
-        <input type="number" id="retryAttemptsInput" placeholder="Retry Attempts (default: 3)">
-        <button id="saveRetryAttempts">Save Retry Attempts</button>
-      </div>
-      <div class="input-group">
-        <input type="number" id="retryDelayInput" placeholder="Retry Delay (seconds, default: 30)">
-        <button id="saveRetryDelay">Save Retry Delay</button>
+      <div class="query-actions">
+        <button id="submitQuery" class="primary-button">
+          <span class="btn-text">🚀 Submit</span>
+          <span class="btn-loading hidden">
+            <span class="spinner"></span> Thinking...
+          </span>
+        </button>
+        <button id="newConversation" class="new-conversation-btn hidden">🔄 New Conversation</button>
+        <button id="toggleSettings" class="settings-toggle">⚙️ Settings</button>
       </div>
     </div>
 
-    <div class="input-group">
-      <textarea id="userQuery" placeholder="e.g., How many 'r's are in the word strawberry?" rows="4"></textarea>
-      <button id="submitQuery">Submit</button>
+    <div id="settings" class="settings-panel hidden">
+      <div class="settings-header">
+        <span>⚙️ Configuration</span>
+        <button id="closeSettings" class="close-settings-btn">✕</button>
+      </div>
+      <div class="settings-grid">
+        <div class="setting-item">
+          <label for="apiKeyInput">API Key <span class="required">*</span></label>
+          <div class="setting-input-group">
+            <input type="password" id="apiKeyInput" placeholder="Enter your Groq API key">
+            <button id="toggleApiKeyVisibility" class="visibility-btn" title="Show/Hide API Key">👁️</button>
+            <button id="saveApiKey" class="save-btn">Save</button>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label for="baseUrlInput">Base URL</label>
+          <div class="setting-input-group">
+            <input type="text" id="baseUrlInput" placeholder="https://api.groq.com/openai/v1">
+            <button id="saveBaseUrl" class="save-btn">Save</button>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label for="modelInput">Model</label>
+          <div class="setting-input-group">
+            <input type="text" id="modelInput" placeholder="llama-3.1-70b-versatile">
+            <button id="saveModel" class="save-btn">Save</button>
+          </div>
+        </div>
+        <div class="setting-item setting-item-half">
+          <label for="retryAttemptsInput">Retry Attempts</label>
+          <div class="setting-input-group">
+            <input type="number" id="retryAttemptsInput" placeholder="3" min="1">
+            <button id="saveRetryAttempts" class="save-btn">Save</button>
+          </div>
+        </div>
+        <div class="setting-item setting-item-half">
+          <label for="retryDelayInput">Retry Delay (s)</label>
+          <div class="setting-input-group">
+            <input type="number" id="retryDelayInput" placeholder="30" min="0">
+            <button id="saveRetryDelay" class="save-btn">Save</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="responseContainer"></div>
-    <div id="activityLog">
-      <div class="titleWrapper">
-        <title>Backend Activity Log</title>
-        <button class="toggleButton" id="toggleActivityLog">Hide Log</button>
-      </div>
-      <div id="activityLogContent"></div>
-    </div>
+    
     <div id="timeContainer"></div>
-  </div>
+  </main>
+
+  <details id="activityLog" class="activity-log">
+    <summary class="activity-log-header">
+      <span>📋 Activity Log</span>
+    </summary>
+    <div id="activityLogContent"></div>
+  </details>
+
+  <footer class="footer">
+    <p>Built with ❤️ using Groq API</p>
+  </footer>
 
   <script type="module" src="script.js"></script>
 </body>
